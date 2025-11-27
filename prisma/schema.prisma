@@ -1,0 +1,26 @@
+generator client {
+  provider = "prisma-client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Location {
+  id          String       @id @default(uuid())
+  name        String
+  description String?
+  type        LocationType
+  lat         Float
+  lng         Float
+  floor       String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+enum LocationType {
+  TOILET
+  ACCESSIBLE_TOILET
+  NURSING_ROOM
+}
+
