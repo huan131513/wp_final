@@ -19,25 +19,25 @@ export default function Home() {
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false)
 
   useEffect(() => {
-      if (navigator.geolocation) {
-          const watchId = navigator.geolocation.watchPosition(
-              (position) => {
-                  setUserLocation({
-                      lat: position.coords.latitude,
-                      lng: position.coords.longitude
-                  })
-              },
-              (error) => {
-                  console.error("Error getting user location:", error.message)
-                  // Retry with low accuracy if high accuracy fails
-                  if (error.code === 3) { // Timeout
-                      // Could retry here
-                  }
-              },
-              { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-          )
-          return () => navigator.geolocation.clearWatch(watchId)
-      }
+    if (navigator.geolocation) {
+      const watchId = navigator.geolocation.watchPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          })
+        },
+        (error) => {
+          console.error("Error getting user location:", error.message)
+          // Retry with low accuracy if high accuracy fails
+          if (error.code === 3) { // Timeout
+            // Could retry here
+          }
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      )
+      return () => navigator.geolocation.clearWatch(watchId)
+    }
   }, [])
 
   const fetchLocations = async () => {
@@ -48,8 +48,8 @@ export default function Home() {
         setLocations(data)
         // Update selected location with new data if it exists
         if (selectedLocation) {
-            const updatedSelected = data.find(l => l.id === selectedLocation.id)
-            if (updatedSelected) setSelectedLocation(updatedSelected)
+          const updatedSelected = data.find(l => l.id === selectedLocation.id)
+          if (updatedSelected) setSelectedLocation(updatedSelected)
         }
       }
       setIsLoading(false)
@@ -64,16 +64,16 @@ export default function Home() {
   }, [])
 
   useEffect(() => {
-    let filtered = selectedType === 'ALL' 
-        ? locations 
-        : locations.filter(loc => loc.type === selectedType)
-    
+    let filtered = selectedType === 'ALL'
+      ? locations
+      : locations.filter(loc => loc.type === selectedType)
+
     if (userLocation) {
-        filtered = [...filtered].sort((a, b) => {
-            const distA = calculateDistance(userLocation.lat, userLocation.lng, a.lat, a.lng)
-            const distB = calculateDistance(userLocation.lat, userLocation.lng, b.lat, b.lng)
-            return distA - distB
-        })
+      filtered = [...filtered].sort((a, b) => {
+        const distA = calculateDistance(userLocation.lat, userLocation.lng, a.lat, a.lng)
+        const distB = calculateDistance(userLocation.lat, userLocation.lng, b.lat, b.lng)
+        return distA - distB
+      })
     }
 
     setFilteredLocations(filtered)
@@ -95,43 +95,43 @@ export default function Home() {
             </div>
             <h1 className="text-xl font-bold text-gray-900 tracking-tight">NTU poop</h1>
           </div>
-          
+
           <nav className="flex gap-4 items-center">
             {session ? (
-                <>
-                    <span className="text-sm text-gray-600 hidden md:inline">Hi, {session.user?.name}</span>
-                    {session.user?.role === 'ADMIN' && (
-                        <Link href="/admin/dashboard" className="text-sm font-medium text-blue-600 hover:text-blue-800">
-                            Dashboard
-                        </Link>
-                    )}
-                    {session.user?.role === 'MEMBER' && (
-                        <Link href="/member/history" className="text-sm font-medium text-blue-600 hover:text-blue-800">
-                            歷史回覆
-                        </Link>
-                    )}
-                    <button 
-                        onClick={() => signOut()} 
-                        className="text-sm font-medium text-gray-600 hover:text-red-600 transition-colors px-3 py-2 rounded-md hover:bg-gray-100"
-                    >
-                        登出
-                    </button>
-                </>
+              <>
+                <span className="text-sm text-gray-600 hidden md:inline">Hi, {session.user?.name}</span>
+                {session.user?.role === 'ADMIN' && (
+                  <Link href="/admin/dashboard" className="text-sm font-medium text-blue-600 hover:text-blue-800">
+                    Dashboard
+                  </Link>
+                )}
+                {session.user?.role === 'MEMBER' && (
+                  <Link href="/member" className="text-sm font-medium text-blue-600 hover:text-blue-800">
+                    會員中心
+                  </Link>
+                )}
+                <button
+                  onClick={() => signOut()}
+                  className="text-sm font-medium text-gray-600 hover:text-red-600 transition-colors px-3 py-2 rounded-md hover:bg-gray-100"
+                >
+                  登出
+                </button>
+              </>
             ) : (
-                <>
-                    <Link 
-                      href="/login" 
-                      className="text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors px-3 py-2 rounded-md hover:bg-gray-100"
-                    >
-                      登入
-                    </Link>
-                    <Link 
-                      href="/register" 
-                      className="text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors px-3 py-2 rounded-md"
-                    >
-                      註冊
-                    </Link>
-                </>
+              <>
+                <Link
+                  href="/login"
+                  className="text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors px-3 py-2 rounded-md hover:bg-gray-100"
+                >
+                  登入
+                </Link>
+                <Link
+                  href="/register"
+                  className="text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors px-3 py-2 rounded-md"
+                >
+                  註冊
+                </Link>
+              </>
             )}
           </nav>
         </div>
@@ -147,40 +147,40 @@ export default function Home() {
             ${isMobileExpanded ? 'h-[80vh]' : 'h-[25vh] md:h-auto'}
         `}>
           {/* Mobile Header with Handle */}
-          <div 
+          <div
             className="md:hidden flex items-center justify-center p-2 cursor-pointer"
             onClick={() => setIsMobileExpanded(!isMobileExpanded)}
           >
-              <div className="w-12 h-1.5 bg-gray-300 rounded-full"></div>
+            <div className="w-12 h-1.5 bg-gray-300 rounded-full"></div>
           </div>
 
           {/* Filters (Hidden on mobile, using top pills instead) */}
           <div className="hidden md:block p-4 border-b border-gray-100 bg-gray-50/50">
             <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">分類</h2>
             <div className="space-y-2">
-              <FilterButton 
-                active={selectedType === 'ALL'} 
+              <FilterButton
+                active={selectedType === 'ALL'}
                 onClick={() => setSelectedType('ALL')}
                 icon={<span className="w-4 h-4 rounded-full bg-gray-400" />}
                 label="所有設施"
                 count={locations.length}
               />
-              <FilterButton 
-                active={selectedType === 'TOILET'} 
+              <FilterButton
+                active={selectedType === 'TOILET'}
                 onClick={() => setSelectedType('TOILET')}
                 icon={<span className="w-4 h-4 rounded-full bg-red-500" />}
                 label="廁所"
                 count={locations.filter(l => l.type === 'TOILET').length}
               />
-              <FilterButton 
-                active={selectedType === 'ACCESSIBLE_TOILET'} 
+              <FilterButton
+                active={selectedType === 'ACCESSIBLE_TOILET'}
                 onClick={() => setSelectedType('ACCESSIBLE_TOILET')}
                 icon={<span className="w-4 h-4 rounded-full bg-blue-500" />}
                 label="無障礙廁所"
                 count={locations.filter(l => l.type === 'ACCESSIBLE_TOILET').length}
               />
-              <FilterButton 
-                active={selectedType === 'NURSING_ROOM'} 
+              <FilterButton
+                active={selectedType === 'NURSING_ROOM'}
                 onClick={() => setSelectedType('NURSING_ROOM')}
                 icon={<span className="w-4 h-4 rounded-full bg-pink-500" />}
                 label="哺乳室"
@@ -193,22 +193,22 @@ export default function Home() {
           <div className="flex-1 overflow-y-auto">
             <div className="p-4">
               <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:block">
-                    位置 ({filteredLocations.length})
-                  </h2>
-                  {/* Mobile title */}
-                  <h2 className="text-lg font-bold md:hidden px-1">
-                    附近地點 ({filteredLocations.length})
-                  </h2>
-                  
-                  {session?.user?.role === 'MEMBER' && (
-                      <button
-                          onClick={() => setIsRequestModalOpen(true)}
-                          className="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 flex items-center gap-1"
-                      >
-                          <span>+</span> 新增設施
-                      </button>
-                  )}
+                <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:block">
+                  位置 ({filteredLocations.length})
+                </h2>
+                {/* Mobile title */}
+                <h2 className="text-lg font-bold md:hidden px-1">
+                  附近地點 ({filteredLocations.length})
+                </h2>
+
+                {session?.user?.role === 'MEMBER' && (
+                  <button
+                    onClick={() => setIsRequestModalOpen(true)}
+                    className="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 flex items-center gap-1"
+                  >
+                    <span>+</span> 新增設施
+                  </button>
+                )}
               </div>
 
               {isLoading ? (
@@ -218,34 +218,33 @@ export default function Home() {
               ) : (
                 <div className="space-y-2">
                   {filteredLocations.map(loc => {
-                    const distance = userLocation 
-                        ? Math.round(calculateDistance(userLocation.lat, userLocation.lng, loc.lat, loc.lng)) 
-                        : null
-                    
+                    const distance = userLocation
+                      ? Math.round(calculateDistance(userLocation.lat, userLocation.lng, loc.lat, loc.lng))
+                      : null
+
                     return (
-                    <button
-                      key={loc.id}
-                      onClick={() => handleLocationSelect(loc)}
-                      className={`w-full text-left p-3 rounded-lg transition-all border ${
-                        selectedLocation?.id === loc.id
-                          ? 'bg-blue-50 border-blue-200 shadow-sm' 
-                          : 'hover:bg-gray-50 border-transparent hover:border-gray-100'
-                      }`}
-                    >
-                      <h3 className={`font-medium text-sm ${selectedLocation?.id === loc.id ? 'text-blue-700' : 'text-gray-900'}`}>
-                        {loc.name}
-                      </h3>
-                      <div className="flex items-center justify-between mt-1">
-                        <span className="text-xs text-gray-500">{formatType(loc.type)}</span>
-                        {distance !== null ? (
-                             <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-medium">
-                                 {distance}m
-                             </span>
-                        ) : (
-                             loc.floor && <span className="text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-600">{loc.floor}</span>
-                        )}
-                      </div>
-                    </button>
+                      <button
+                        key={loc.id}
+                        onClick={() => handleLocationSelect(loc)}
+                        className={`w-full text-left p-3 rounded-lg transition-all border ${selectedLocation?.id === loc.id
+                            ? 'bg-blue-50 border-blue-200 shadow-sm'
+                            : 'hover:bg-gray-50 border-transparent hover:border-gray-100'
+                          }`}
+                      >
+                        <h3 className={`font-medium text-sm ${selectedLocation?.id === loc.id ? 'text-blue-700' : 'text-gray-900'}`}>
+                          {loc.name}
+                        </h3>
+                        <div className="flex items-center justify-between mt-1">
+                          <span className="text-xs text-gray-500">{formatType(loc.type)}</span>
+                          {distance !== null ? (
+                            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-medium">
+                              {distance}m
+                            </span>
+                          ) : (
+                            loc.floor && <span className="text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-600">{loc.floor}</span>
+                          )}
+                        </div>
+                      </button>
                     )
                   })}
                 </div>
@@ -254,58 +253,56 @@ export default function Home() {
           </div>
         </aside>
 
-          {/* Map Container */}
+        {/* Map Container */}
         <div className="flex-1 relative h-full min-h-[300px]">
-          <MapComponent 
-            locations={filteredLocations} 
+          <MapComponent
+            locations={filteredLocations}
             selectedLocation={selectedLocation}
             onLocationSelect={handleLocationSelect}
             onReviewAdded={fetchLocations}
             userLocation={userLocation}
           />
-          
+
           {/* Mobile Filter Toggle (Visible only on small screens) */}
           <div className="md:hidden absolute top-4 left-4 right-4 z-10 flex gap-2 overflow-x-auto pb-2 no-scrollbar">
             {/* Simple pills for mobile */}
             {['ALL', 'TOILET', 'ACCESSIBLE_TOILET', 'NURSING_ROOM'].map((type) => (
-               <button
-                 key={type}
-                 onClick={() => setSelectedType(type as any)}
-                 className={`px-4 py-2 rounded-full text-xs font-bold shadow-md whitespace-nowrap ${
-                   selectedType === type 
-                     ? 'bg-blue-600 text-white' 
-                     : 'bg-white text-gray-700'
-                 }`}
-               >
-                 {type === 'ALL' ? 'All' : formatType(type as string)}
-               </button>
+              <button
+                key={type}
+                onClick={() => setSelectedType(type as any)}
+                className={`px-4 py-2 rounded-full text-xs font-bold shadow-md whitespace-nowrap ${selectedType === type
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-white text-gray-700'
+                  }`}
+              >
+                {type === 'ALL' ? 'All' : formatType(type as string)}
+              </button>
             ))}
           </div>
         </div>
       </main>
 
       {isRequestModalOpen && (
-          <RequestFacilityModal onClose={() => setIsRequestModalOpen(false)} />
+        <RequestFacilityModal onClose={() => setIsRequestModalOpen(false)} />
       )}
     </div>
   )
 }
 
-function FilterButton({ active, onClick, icon, label, count }: { 
-  active: boolean, 
-  onClick: () => void, 
-  icon: React.ReactNode, 
+function FilterButton({ active, onClick, icon, label, count }: {
+  active: boolean,
+  onClick: () => void,
+  icon: React.ReactNode,
   label: string,
   count: number
 }) {
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-center justify-between p-2 rounded-md transition-colors ${
-        active 
-          ? 'bg-gray-100 text-gray-900 font-medium' 
+      className={`w-full flex items-center justify-between p-2 rounded-md transition-colors ${active
+          ? 'bg-gray-100 text-gray-900 font-medium'
           : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-      }`}
+        }`}
     >
       <div className="flex items-center gap-3">
         {icon}
@@ -324,15 +321,15 @@ function formatType(type: string) {
 
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
   const R = 6371e3; // metres
-  const φ1 = lat1 * Math.PI/180; // φ, λ in radians
-  const φ2 = lat2 * Math.PI/180;
-  const Δφ = (lat2-lat1) * Math.PI/180;
-  const Δλ = (lon2-lon1) * Math.PI/180;
+  const φ1 = lat1 * Math.PI / 180; // φ, λ in radians
+  const φ2 = lat2 * Math.PI / 180;
+  const Δφ = (lat2 - lat1) * Math.PI / 180;
+  const Δλ = (lon2 - lon1) * Math.PI / 180;
 
-  const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
-          Math.cos(φ1) * Math.cos(φ2) *
-          Math.sin(Δλ/2) * Math.sin(Δλ/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) *
+    Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
   return R * c; // in metres
 }
