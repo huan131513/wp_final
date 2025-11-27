@@ -7,6 +7,20 @@ datasource db {
   provider = "postgresql"
 }
 
+model User {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  password  String
+  role      Role     @default(MEMBER)
+  
+  reviews   Review[]
+  reports   Report[]
+  requests  FacilityRequest[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Location {
   id          String       @id @default(uuid())
   name        String
@@ -32,6 +46,7 @@ model Location {
   hasHandrail      Boolean @default(false) // 扶手
 
   reviews     Review[]
+  reports     Report[]
 
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
@@ -42,15 +57,61 @@ model Review {
   locationId  String
   location    Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
   
-  userName    String   // Simple user name since we don't have full auth for public users yet
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  
+  userName    String   // Keeping for guest/legacy reviews if needed, or just snapshot
   rating      Int      // 1-5 stars
   comment     String
   
   createdAt   DateTime @default(now())
 }
 
+model Report {
+  id          String   @id @default(uuid())
+  content     String
+  status      ReportStatus @default(PENDING)
+  
+  locationId  String
+  location    Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model FacilityRequest {
+  id          String   @id @default(uuid())
+  data        Json     // Stores the location data to be added
+  status      RequestStatus @default(PENDING)
+  
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
 enum LocationType {
   TOILET
   ACCESSIBLE_TOILET
   NURSING_ROOM
+}
+
+enum Role {
+  ADMIN
+  MEMBER
+}
+
+enum ReportStatus {
+  PENDING
+  RESOLVED
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }

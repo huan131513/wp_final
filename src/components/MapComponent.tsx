@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { APIProvider, Map, AdvancedMarker, Pin, InfoWindow, useMap } from '@vis.gl/react-google-maps'
 import type { Location, LocationType } from '@/types/location'
+import { useSession } from 'next-auth/react'
 
 const NTU_CENTER = { lat: 25.0174, lng: 121.5397 }
 
@@ -15,10 +16,40 @@ interface MapComponentProps {
 }
 
 export default function MapComponent({ locations, selectedLocation, onLocationSelect, onReviewAdded, userLocation }: MapComponentProps) {
-  // const [userLocation, setUserLocation] = useState<{ lat: number, lng: number } | null>(null)
+  const { data: session } = useSession()
   const [map, setMap] = useState<google.maps.Map | null>(null)
-  
-  // useEffect for geolocation removed as it is handled in parent
+    const [isReportModalOpen, setIsReportModalOpen] = useState(false)
+    const [reportContent, setReportContent] = useState('')
+    const reportInputRef = useRef<HTMLTextAreaElement>(null)
+
+    // Use local variable to avoid state update on every keystroke causing focus loss if re-rendered incorrectly
+    // But here re-render is expected. The issue might be the InfoWindow or Map re-rendering aggressively.
+    // Let's try to stop propagation of click events on the textarea to prevent map interactions.
+    
+    const handleReportSubmit = async () => {
+      if (!selectedLocation || !session) return
+      
+      try {
+          const res = await fetch('/api/reports', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                  locationId: selectedLocation.id,
+                  content: reportContent
+              })
+          })
+          
+          if (res.ok) {
+              alert('感謝您的回報！我們會盡快處理。')
+              setIsReportModalOpen(false)
+              setReportContent('')
+          } else {
+              alert('回報失敗，請稍後再試')
+          }
+      } catch (e) {
+          alert('回報失敗')
+      }
+  }
 
   const handleRecenter = () => {
       if (userLocation && map) {
@@ -58,13 +89,13 @@ export default function MapComponent({ locations, selectedLocation, onLocationSe
              </AdvancedMarker>
            ))}
 
-           {selectedLocation && (
+            {selectedLocation && (
              <InfoWindow
                position={{ lat: selectedLocation.lat, lng: selectedLocation.lng }}
                onCloseClick={() => onLocationSelect(null)}
                maxWidth={350}
              >
-               <div className="p-2 min-w-[300px] max-h-[400px] overflow-y-auto">
+               <div className="p-2 min-w-[300px] max-h-[400px] overflow-y-auto pr-4">
                  <div className="flex items-center gap-2 mb-3">
                     <div className="text-2xl">
                         {selectedLocation.type === 'TOILET' && '🚽'}
@@ -74,12 +105,14 @@ export default function MapComponent({ locations, selectedLocation, onLocationSe
                     <div className="w-100">
                         <div className="flex justify-between gap-2 ">
                             <h3 className="font-bold text-xl text-gray-900 leading-none">{selectedLocation.name}</h3>
-                            <button
-                                onClick={() => alert('感謝您的回報！我們會盡快處理。')}
-                                className="bg-yellow-400 hover:bg-yellow-500 text-white text-xs px-2 py-1 rounded shadow-sm transition-colors whitespace-nowrap"
-                            >
-                                回報
-                            </button>
+                            {session && (
+                                <button
+                                    onClick={() => setIsReportModalOpen(true)}
+                                    className="bg-yellow-400 hover:bg-yellow-500 text-white text-xs px-2 py-1 rounded shadow-sm transition-colors whitespace-nowrap"
+                                >
+                                    回報
+                                </button>
+                            )}
                         </div>
                         <div className="text-sm font-medium text-gray-500 mt-1">
                             {formatLocationType(selectedLocation.type)}
@@ -137,6 +170,47 @@ export default function MapComponent({ locations, selectedLocation, onLocationSe
            )}
         </Map>
         
+        {/* Report Modal */}
+        {isReportModalOpen && (
+            <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/50"
+                 onClick={(e) => e.stopPropagation()} // Prevent clicks from reaching map
+                 onMouseDown={(e) => e.stopPropagation()}
+                 onMouseUp={(e) => e.stopPropagation()}
+                 onTouchStart={(e) => e.stopPropagation()}
+            >
+                <div className="bg-white p-4 rounded-lg w-80 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                    <h3 className="font-bold text-lg mb-2">回報問題</h3>
+                    <p className="text-sm text-gray-600 mb-2">地點：{selectedLocation?.name}</p>
+                    <textarea
+                        id="report-content"
+                        name="report-content"
+                        ref={reportInputRef}
+                        className="w-full border rounded p-2 text-sm mb-4 h-24 text-black"
+                        placeholder="請描述您遇到的問題..."
+                        value={reportContent}
+                        onChange={e => setReportContent(e.target.value)}
+                        onKeyDown={(e) => e.stopPropagation()} // Key events shouldn't bubble to map
+                        onKeyUp={(e) => e.stopPropagation()}
+                        onInput={(e) => e.stopPropagation()}
+                    />
+                    <div className="flex justify-end gap-2">
+                        <button
+                            onClick={() => setIsReportModalOpen(false)}
+                            className="px-3 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded"
+                        >
+                            取消
+                        </button>
+                        <button
+                            onClick={handleReportSubmit}
+                            className="px-3 py-1 text-sm bg-yellow-400 text-white rounded hover:bg-yellow-500"
+                        >
+                            送出
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
+
         {userLocation && (
             <button
                 onClick={handleRecenter}
@@ -165,11 +239,20 @@ function FacilityItem({ label, has }: { label: string, has: boolean }) {
 }
 
 function ReviewSection({ locationId, reviews, onReviewAdded }: { locationId: string, reviews: any[], onReviewAdded?: () => void }) {
+    const { data: session } = useSession()
     const [isAdding, setIsAdding] = useState(false)
     const [rating, setRating] = useState(5)
     const [comment, setComment] = useState('')
-    const [userName, setUserName] = useState('')
     const [localReviews, setLocalReviews] = useState(reviews)
+    const formRef = useRef<HTMLFormElement>(null)
+
+    const handleStartReview = () => {
+        setIsAdding(true)
+        // Wait for the form to render, then scroll it into view
+        setTimeout(() => {
+            formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }, 100)
+    }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -179,7 +262,6 @@ function ReviewSection({ locationId, reviews, onReviewAdded }: { locationId: str
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     locationId,
-                    userName,
                     rating,
                     comment
                 })
@@ -192,7 +274,6 @@ function ReviewSection({ locationId, reviews, onReviewAdded }: { locationId: str
                 setIsAdding(false)
                 setComment('')
                 setRating(5)
-                setUserName('')
                 // Trigger parent refresh to ensure data consistency
                 if (onReviewAdded) onReviewAdded()
             }
@@ -214,14 +295,19 @@ function ReviewSection({ locationId, reviews, onReviewAdded }: { locationId: str
 
             {!isAdding ? (
                 <button 
-                    onClick={() => setIsAdding(true)}
-                    className="w-full py-2 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md text-sm font-medium mb-4 transition-colors flex items-center justify-between group"
+                    onClick={handleStartReview}
+                    disabled={!session}
+                    className={`w-full py-2 px-4 rounded-md text-sm font-medium mb-4 transition-colors flex items-center justify-between group
+                        ${session 
+                            ? 'bg-gray-100 hover:bg-gray-200 text-gray-700' 
+                            : 'bg-gray-50 text-gray-400 cursor-not-allowed'
+                        }`}
                 >
-                    <span>新增評論...</span>
-                    <span className="text-gray-400 group-hover:text-gray-600">➜</span>
+                    <span>{session ? '新增評論...' : '登入後即可評論'}</span>
+                    {session && <span className="text-gray-400 group-hover:text-gray-600">➜</span>}
                 </button>
             ) : (
-                <form onSubmit={handleSubmit} className="bg-gray-50 p-3 rounded-md mb-4 border border-gray-200">
+                <form ref={formRef} onSubmit={handleSubmit} className="bg-gray-50 p-3 rounded-md mb-4 border border-gray-200">
                     <div className="mb-2">
                         <label className="block text-xs font-medium text-gray-700 mb-1">評分</label>
                         <div className="flex gap-1">
@@ -236,15 +322,6 @@ function ReviewSection({ locationId, reviews, onReviewAdded }: { locationId: str
                                 </button>
                             ))}
                         </div>
-                    </div>
-                    <div className="mb-2">
-                         <input 
-                            placeholder="您的暱稱" 
-                            required
-                            value={userName}
-                            onChange={e => setUserName(e.target.value)}
-                            className="w-full text-sm p-2 border rounded text-black"
-                        />
                     </div>
                     <div className="mb-2">
                         <textarea 
@@ -265,7 +342,7 @@ function ReviewSection({ locationId, reviews, onReviewAdded }: { locationId: str
                         </button>
                         <button 
                             type="submit"
-                            className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                            className="px-3 py-1 text-xs bg-blue-600 text-white font-bold rounded hover:bg-blue-700"
                         >
                             送出
                         </button>
@@ -319,7 +396,7 @@ const getMarkerContent = (type: LocationType) => {
   } else if (type === 'ACCESSIBLE_TOILET') {
     return (
       <div className="relative w-8 h-8">
-        <div className="absolute inset-0 bg-red-600 rounded-md shadow-md flex items-center justify-center">
+        <div className="absolute inset-0 bg-blue-800 rounded-md shadow-md flex items-center justify-center">
           <img 
             src="https://api.iconify.design/fa-solid:wheelchair.svg?color=white" 
             alt="Accessible Toilet" 
@@ -327,21 +404,21 @@ const getMarkerContent = (type: LocationType) => {
           />
         </div>
         {/* Triangle arrow at bottom */}
-        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-3 h-3 bg-red-600 rotate-45 shadow-sm -z-10"></div>
+        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-3 h-3 bg-blue-800 rotate-45 shadow-sm -z-10"></div>
       </div>
     )
   } else if (type === 'NURSING_ROOM') {
     return (
       <div className="relative w-8 h-8">
-        <div className="absolute inset-0 bg-red-600 rounded-md shadow-md flex items-center justify-center">
+        <div className="absolute inset-0 bg-pink-300 rounded-md shadow-md flex items-center justify-center">
           <img 
-            src="https://api.iconify.design/fa-solid:baby-carriage.svg?color=white" 
+            src="https://api.iconify.design/mdi:baby-bottle.svg?color=white" 
             alt="Nursing Room" 
             className="w-5 h-5"
           />
         </div>
         {/* Triangle arrow at bottom */}
-        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-3 h-3 bg-red-600 rotate-45 shadow-sm -z-10"></div>
+        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-3 h-3 bg-pink-300 rotate-45 shadow-sm -z-10"></div>
       </div>
     )
   }
