@@ -1,6 +1,5 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../node_modules/.prisma/client"
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -16,6 +15,7 @@ model User {
   reviews   Review[]
   reports   Report[]
   requests  FacilityRequest[]
+  achievements UserAchievement[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -92,6 +92,29 @@ model FacilityRequest {
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model Achievement {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String
+  icon        String
+  criteriaType String   // e.g., "REVIEW_COUNT", "REPORT_COUNT"
+  threshold    Int      // e.g., 1, 5, 10
+
+  users       UserAchievement[]
+}
+
+model UserAchievement {
+  id            String      @id @default(uuid())
+  userId        String
+  achievementId String
+  unlockedAt    DateTime    @default(now())
+  
+  user          User        @relation(fields: [userId], references: [id])
+  achievement   Achievement @relation(fields: [achievementId], references: [id])
+
+  @@unique([userId, achievementId])
 }
 
 enum LocationType {
