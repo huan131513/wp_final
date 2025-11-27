@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client"
+  output   = "../node_modules/.prisma/client"
 }
 
 datasource db {
@@ -14,8 +15,38 @@ model Location {
   lat         Float
   lng         Float
   floor       String?
+  
+  // Common facilities
+  hasTissue   Boolean      @default(false)
+  hasDryer    Boolean      @default(false)
+  
+  // Toilet specific
+  hasSeat     Boolean      @default(false) // 坐式馬桶
+
+  // Nursing Room specific
+  hasDiaperTable   Boolean @default(false) // 尿布檯
+  hasWaterDispenser Boolean @default(false) // 飲水機
+  hasAutoDoor      Boolean @default(false) // 自動門
+
+  // Accessible Toilet specific
+  hasHandrail      Boolean @default(false) // 扶手
+
+  reviews     Review[]
+
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+}
+
+model Review {
+  id          String   @id @default(uuid())
+  locationId  String
+  location    Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  
+  userName    String   // Simple user name since we don't have full auth for public users yet
+  rating      Int      // 1-5 stars
+  comment     String
+  
+  createdAt   DateTime @default(now())
 }
 
 enum LocationType {
@@ -23,4 +54,3 @@ enum LocationType {
   ACCESSIBLE_TOILET
   NURSING_ROOM
 }
-
