@@ -26,6 +26,7 @@ export default function AdminLogin() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-24">
       <h1 className="text-2xl font-bold mb-4">Admin Login</h1>
+      your-secure-admin-password
       <form onSubmit={handleSubmit} className="flex flex-col gap-4 w-full max-w-xs">
         <input
           type="password"

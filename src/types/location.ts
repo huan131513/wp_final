@@ -8,7 +8,26 @@ export interface Location {
   lat: number;
   lng: number;
   floor: string | null;
+  
+  hasTissue: boolean;
+  hasDryer: boolean;
+  hasSeat: boolean;
+  hasDiaperTable: boolean;
+  hasWaterDispenser: boolean;
+  hasAutoDoor: boolean;
+  hasHandrail: boolean;
+
   createdAt: Date;
   updatedAt: Date;
+  
+  reviews?: Review[];
 }
 
+export interface Review {
+  id: string;
+  locationId: string;
+  userName: string;
+  rating: number;
+  comment: string;
+  createdAt: Date;
+}

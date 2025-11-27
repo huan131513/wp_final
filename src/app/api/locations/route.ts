@@ -11,11 +11,24 @@ const locationSchema = z.object({
   lat: z.number(),
   lng: z.number(),
   floor: z.string().optional(),
+  hasTissue: z.boolean().optional(),
+  hasDryer: z.boolean().optional(),
+  hasSeat: z.boolean().optional(),
+  hasDiaperTable: z.boolean().optional(),
+  hasWaterDispenser: z.boolean().optional(),
+  hasAutoDoor: z.boolean().optional(),
+  hasHandrail: z.boolean().optional(),
 })
 
 export async function GET() {
   try {
-    const locations = await prisma.location.findMany()
+    const locations = await prisma.location.findMany({
+        include: {
+            reviews: {
+                orderBy: { createdAt: 'desc' }
+            }
+        }
+    })
     return NextResponse.json(locations)
   } catch (error) {
     console.error(error)
@@ -46,4 +59,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Failed to create location' }, { status: 500 })
   }
 }
-

@@ -11,6 +11,13 @@ const locationSchema = z.object({
   lat: z.number(),
   lng: z.number(),
   floor: z.string().optional(),
+  hasTissue: z.boolean().optional(),
+  hasDryer: z.boolean().optional(),
+  hasSeat: z.boolean().optional(),
+  hasDiaperTable: z.boolean().optional(),
+  hasWaterDispenser: z.boolean().optional(),
+  hasAutoDoor: z.boolean().optional(),
+  hasHandrail: z.boolean().optional(),
 })
 
 export async function PUT(
@@ -63,4 +70,3 @@ export async function DELETE(
     return NextResponse.json({ error: 'Failed to delete location' }, { status: 500 })
   }
 }
-

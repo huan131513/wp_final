@@ -11,33 +11,69 @@ export default function Home() {
   const [selectedType, setSelectedType] = useState<LocationType | 'ALL'>('ALL')
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [userLocation, setUserLocation] = useState<{ lat: number, lng: number } | null>(null)
+  const [isMobileExpanded, setIsMobileExpanded] = useState(false)
 
   useEffect(() => {
-    fetch('/api/locations')
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) {
-          setLocations(data)
-          setFilteredLocations(data)
+      if (navigator.geolocation) {
+          const watchId = navigator.geolocation.watchPosition(
+              (position) => {
+                  setUserLocation({
+                      lat: position.coords.latitude,
+                      lng: position.coords.longitude
+                  })
+              },
+              (error) => {
+                  console.error("Error getting user location:", error)
+              },
+              { enableHighAccuracy: true }
+          )
+          return () => navigator.geolocation.clearWatch(watchId)
+      }
+  }, [])
+
+  const fetchLocations = async () => {
+    try {
+      const res = await fetch('/api/locations')
+      const data = await res.json()
+      if (Array.isArray(data)) {
+        setLocations(data)
+        // Update selected location with new data if it exists
+        if (selectedLocation) {
+            const updatedSelected = data.find(l => l.id === selectedLocation.id)
+            if (updatedSelected) setSelectedLocation(updatedSelected)
         }
-        setIsLoading(false)
-      })
-      .catch(err => {
-        console.error(err)
-        setIsLoading(false)
-      })
+      }
+      setIsLoading(false)
+    } catch (err) {
+      console.error(err)
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchLocations()
   }, [])
 
   useEffect(() => {
-    if (selectedType === 'ALL') {
-      setFilteredLocations(locations)
-    } else {
-      setFilteredLocations(locations.filter(loc => loc.type === selectedType))
+    let filtered = selectedType === 'ALL' 
+        ? locations 
+        : locations.filter(loc => loc.type === selectedType)
+    
+    if (userLocation) {
+        filtered = [...filtered].sort((a, b) => {
+            const distA = calculateDistance(userLocation.lat, userLocation.lng, a.lat, a.lng)
+            const distB = calculateDistance(userLocation.lat, userLocation.lng, b.lat, b.lng)
+            return distA - distB
+        })
     }
-  }, [selectedType, locations])
+
+    setFilteredLocations(filtered)
+  }, [selectedType, locations, userLocation])
 
   const handleLocationSelect = (loc: Location | null) => {
     setSelectedLocation(loc)
+    setIsMobileExpanded(false)
   }
 
   return (
@@ -59,46 +95,59 @@ export default function Home() {
               href="/admin" 
               className="text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors px-3 py-2 rounded-md hover:bg-gray-100"
             >
-              Admin Login
+              登入
             </Link>
           </nav>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex overflow-hidden max-w-7xl w-full mx-auto p-4 gap-4">
-        {/* Sidebar - Desktop */}
-        <aside className="hidden md:flex flex-col w-80 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          {/* Filters */}
-          <div className="p-4 border-b border-gray-100 bg-gray-50/50">
-            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Filters</h2>
+      <main className="flex-1 flex overflow-hidden max-w-7xl w-full mx-auto p-4 gap-4 relative">
+        {/* Sidebar - Desktop & Mobile Overlay */}
+        <aside className={`
+            flex flex-col bg-white overflow-hidden
+            md:w-80 md:relative md:h-auto md:rounded-xl md:shadow-sm md:border md:border-gray-200
+            fixed bottom-0 left-0 right-0 z-30 rounded-t-2xl shadow-[0_-2px_10px_rgba(0,0,0,0.1)] transition-all duration-300 ease-in-out
+            ${isMobileExpanded ? 'h-[80vh]' : 'h-[25vh] md:h-auto'}
+        `}>
+          {/* Mobile Header with Handle */}
+          <div 
+            className="md:hidden flex items-center justify-center p-2 cursor-pointer"
+            onClick={() => setIsMobileExpanded(!isMobileExpanded)}
+          >
+              <div className="w-12 h-1.5 bg-gray-300 rounded-full"></div>
+          </div>
+
+          {/* Filters (Hidden on mobile, using top pills instead) */}
+          <div className="hidden md:block p-4 border-b border-gray-100 bg-gray-50/50">
+            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">分類</h2>
             <div className="space-y-2">
               <FilterButton 
                 active={selectedType === 'ALL'} 
                 onClick={() => setSelectedType('ALL')}
                 icon={<span className="w-4 h-4 rounded-full bg-gray-400" />}
-                label="All Facilities"
+                label="所有設施"
                 count={locations.length}
               />
               <FilterButton 
                 active={selectedType === 'TOILET'} 
                 onClick={() => setSelectedType('TOILET')}
                 icon={<span className="w-4 h-4 rounded-full bg-red-500" />}
-                label="Toilets"
+                label="廁所"
                 count={locations.filter(l => l.type === 'TOILET').length}
               />
               <FilterButton 
                 active={selectedType === 'ACCESSIBLE_TOILET'} 
                 onClick={() => setSelectedType('ACCESSIBLE_TOILET')}
                 icon={<span className="w-4 h-4 rounded-full bg-blue-500" />}
-                label="Accessible"
+                label="無障礙廁所"
                 count={locations.filter(l => l.type === 'ACCESSIBLE_TOILET').length}
               />
               <FilterButton 
                 active={selectedType === 'NURSING_ROOM'} 
                 onClick={() => setSelectedType('NURSING_ROOM')}
                 icon={<span className="w-4 h-4 rounded-full bg-pink-500" />}
-                label="Nursing Rooms"
+                label="哺乳室"
                 count={locations.filter(l => l.type === 'NURSING_ROOM').length}
               />
             </div>
@@ -107,8 +156,12 @@ export default function Home() {
           {/* Location List */}
           <div className="flex-1 overflow-y-auto">
             <div className="p-4">
-              <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
-                Locations ({filteredLocations.length})
+              <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 hidden md:block">
+                位置 ({filteredLocations.length})
+              </h2>
+              {/* Mobile title */}
+              <h2 className="text-lg font-bold mb-3 md:hidden px-1">
+                附近地點 ({filteredLocations.length})
               </h2>
               {isLoading ? (
                 <div className="text-center py-8 text-gray-400 text-sm">Loading...</div>
@@ -116,7 +169,12 @@ export default function Home() {
                 <div className="text-center py-8 text-gray-400 text-sm">No locations found</div>
               ) : (
                 <div className="space-y-2">
-                  {filteredLocations.map(loc => (
+                  {filteredLocations.map(loc => {
+                    const distance = userLocation 
+                        ? Math.round(calculateDistance(userLocation.lat, userLocation.lng, loc.lat, loc.lng)) 
+                        : null
+                    
+                    return (
                     <button
                       key={loc.id}
                       onClick={() => handleLocationSelect(loc)}
@@ -131,22 +189,31 @@ export default function Home() {
                       </h3>
                       <div className="flex items-center justify-between mt-1">
                         <span className="text-xs text-gray-500">{formatType(loc.type)}</span>
-                        {loc.floor && <span className="text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-600">{loc.floor}</span>}
+                        {distance !== null ? (
+                             <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-medium">
+                                 {distance}m
+                             </span>
+                        ) : (
+                             loc.floor && <span className="text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-600">{loc.floor}</span>
+                        )}
                       </div>
                     </button>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </div>
           </div>
         </aside>
 
-        {/* Map Container */}
+          {/* Map Container */}
         <div className="flex-1 relative h-full min-h-[300px]">
           <MapComponent 
             locations={filteredLocations} 
             selectedLocation={selectedLocation}
             onLocationSelect={handleLocationSelect}
+            onReviewAdded={fetchLocations}
+            userLocation={userLocation}
           />
           
           {/* Mobile Filter Toggle (Visible only on small screens) */}
@@ -201,4 +268,19 @@ function FilterButton({ active, onClick, icon, label, count }: {
 
 function formatType(type: string) {
   return type.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371e3; // metres
+  const φ1 = lat1 * Math.PI/180; // φ, λ in radians
+  const φ2 = lat2 * Math.PI/180;
+  const Δφ = (lat2-lat1) * Math.PI/180;
+  const Δλ = (lon2-lon1) * Math.PI/180;
+
+  const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+          Math.cos(φ1) * Math.cos(φ2) *
+          Math.sin(Δλ/2) * Math.sin(Δλ/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+  return R * c; // in metres
 }
