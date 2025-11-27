@@ -4,8 +4,11 @@ import { useState, useEffect } from 'react'
 import MapComponent from '@/components/MapComponent'
 import { Location, LocationType } from '@/types/location'
 import Link from 'next/link'
+import { useSession, signOut } from 'next-auth/react'
+import RequestFacilityModal from '@/components/RequestFacilityModal'
 
 export default function Home() {
+  const { data: session } = useSession()
   const [locations, setLocations] = useState<Location[]>([])
   const [filteredLocations, setFilteredLocations] = useState<Location[]>([])
   const [selectedType, setSelectedType] = useState<LocationType | 'ALL'>('ALL')
@@ -13,6 +16,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true)
   const [userLocation, setUserLocation] = useState<{ lat: number, lng: number } | null>(null)
   const [isMobileExpanded, setIsMobileExpanded] = useState(false)
+  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false)
 
   useEffect(() => {
       if (navigator.geolocation) {
@@ -24,9 +28,13 @@ export default function Home() {
                   })
               },
               (error) => {
-                  console.error("Error getting user location:", error)
+                  console.error("Error getting user location:", error.message)
+                  // Retry with low accuracy if high accuracy fails
+                  if (error.code === 3) { // Timeout
+                      // Could retry here
+                  }
               },
-              { enableHighAccuracy: true }
+              { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
           )
           return () => navigator.geolocation.clearWatch(watchId)
       }
@@ -82,21 +90,49 @@ export default function Home() {
       <header className="bg-white shadow-sm z-10 border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="bg-blue-600 p-2 rounded-lg">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" className="w-6 h-6">
-                <path fillRule="evenodd" d="M11.54 22.351l.07.04.028.016a.76.76 0 00.723 0l.028-.015.071-.041a16.975 16.975 0 001.144-.742 19.58 19.58 0 002.683-2.282c1.944-1.99 3.963-4.98 3.963-8.827a8.25 8.25 0 00-16.5 0c0 3.846 2.02 6.837 3.963 8.827a19.58 19.58 0 002.682 2.282 16.975 16.975 0 001.145.742zM12 13.5a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
-              </svg>
+            <div className="rounded-lg">
+              💩
             </div>
-            <h1 className="text-xl font-bold text-gray-900 tracking-tight">NTU Campus Map</h1>
+            <h1 className="text-xl font-bold text-gray-900 tracking-tight">NTU poop</h1>
           </div>
           
-          <nav className="flex gap-4">
-            <Link 
-              href="/admin" 
-              className="text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors px-3 py-2 rounded-md hover:bg-gray-100"
-            >
-              登入
-            </Link>
+          <nav className="flex gap-4 items-center">
+            {session ? (
+                <>
+                    <span className="text-sm text-gray-600 hidden md:inline">Hi, {session.user?.name}</span>
+                    {session.user?.role === 'ADMIN' && (
+                        <Link href="/admin/dashboard" className="text-sm font-medium text-blue-600 hover:text-blue-800">
+                            Dashboard
+                        </Link>
+                    )}
+                    {session.user?.role === 'MEMBER' && (
+                        <Link href="/member/history" className="text-sm font-medium text-blue-600 hover:text-blue-800">
+                            歷史回覆
+                        </Link>
+                    )}
+                    <button 
+                        onClick={() => signOut()} 
+                        className="text-sm font-medium text-gray-600 hover:text-red-600 transition-colors px-3 py-2 rounded-md hover:bg-gray-100"
+                    >
+                        登出
+                    </button>
+                </>
+            ) : (
+                <>
+                    <Link 
+                      href="/login" 
+                      className="text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors px-3 py-2 rounded-md hover:bg-gray-100"
+                    >
+                      登入
+                    </Link>
+                    <Link 
+                      href="/register" 
+                      className="text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors px-3 py-2 rounded-md"
+                    >
+                      註冊
+                    </Link>
+                </>
+            )}
           </nav>
         </div>
       </header>
@@ -156,13 +192,25 @@ export default function Home() {
           {/* Location List */}
           <div className="flex-1 overflow-y-auto">
             <div className="p-4">
-              <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 hidden md:block">
-                位置 ({filteredLocations.length})
-              </h2>
-              {/* Mobile title */}
-              <h2 className="text-lg font-bold mb-3 md:hidden px-1">
-                附近地點 ({filteredLocations.length})
-              </h2>
+              <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:block">
+                    位置 ({filteredLocations.length})
+                  </h2>
+                  {/* Mobile title */}
+                  <h2 className="text-lg font-bold md:hidden px-1">
+                    附近地點 ({filteredLocations.length})
+                  </h2>
+                  
+                  {session?.user?.role === 'MEMBER' && (
+                      <button
+                          onClick={() => setIsRequestModalOpen(true)}
+                          className="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 flex items-center gap-1"
+                      >
+                          <span>+</span> 新增設施
+                      </button>
+                  )}
+              </div>
+
               {isLoading ? (
                 <div className="text-center py-8 text-gray-400 text-sm">Loading...</div>
               ) : filteredLocations.length === 0 ? (
@@ -235,6 +283,10 @@ export default function Home() {
           </div>
         </div>
       </main>
+
+      {isRequestModalOpen && (
+          <RequestFacilityModal onClose={() => setIsRequestModalOpen(false)} />
+      )}
     </div>
   )
 }
