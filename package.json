@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && cp node_modules/.prisma/client/client.js node_modules/.prisma/client/default.js && cp node_modules/.prisma/client/client.d.ts node_modules/.prisma/client/default.d.ts && next build",
+    "build": "prisma generate && sed -i 's/.prisma\\/client\\/default/.prisma\\/client\\/index/g' node_modules/@prisma/client/default.js && next build",
     "start": "next start",
     "lint": "eslint"
   },
