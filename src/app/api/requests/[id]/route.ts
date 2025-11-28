@@ -27,7 +27,7 @@ export async function PUT(
 
     if (status === 'APPROVED') {
         // Create the location
-        // Cast data to any to access properties
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const locationData = facilityRequest.data as any
         
         await prisma.location.create({

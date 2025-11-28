@@ -27,7 +27,7 @@ export default function RegisterPage() {
         const data = await res.json()
         setError(data.error || 'Registration failed')
       }
-    } catch (err) {
+    } catch {
       setError('An error occurred')
     }
   }

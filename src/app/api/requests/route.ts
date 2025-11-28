@@ -2,12 +2,6 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { z } from 'zod'
-
-// Schema similar to location but wrapped in request
-const requestSchema = z.object({
-  data: z.any(), // We'll trust the structure for now or replicate location schema
-})
 
 // Create Request (Member)
 export async function POST(request: Request) {
@@ -18,8 +12,6 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json()
-    // Store the entire body as the data for the new location
-    // We could validate it against locationSchema here if we want strictness
     
     const facilityRequest = await prisma.facilityRequest.create({
       data: {
@@ -36,7 +28,7 @@ export async function POST(request: Request) {
 }
 
 // Get Requests (Admin)
-export async function GET(request: Request) {
+export async function GET() {
   const session = await getServerSession(authOptions)
   if (!session || session.user.role !== 'ADMIN') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -51,6 +43,7 @@ export async function GET(request: Request) {
     })
     return NextResponse.json(requests)
   } catch (error) {
+    console.error(error)
     return NextResponse.json({ error: 'Failed to fetch requests' }, { status: 500 })
   }
 }
@@ -78,20 +71,40 @@ export async function PATCH(request: Request) {
       },
     })
 
-    // If approved, we should actually create the location
+    // Create Notification Logic
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const reqData = updatedRequest.data as any
+    const locationName = reqData.name || '新地點'
+    
+    let notifTitle = ''
+    let notifMessage = ''
+
     if (status === 'APPROVED') {
-        // Fetch the full request data
-        const fullReq = await prisma.facilityRequest.findUnique({ where: { id } })
-        if (fullReq) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const locData = fullReq.data as any
-            await prisma.location.create({
-                data: {
-                    ...locData,
-                    // ensure we don't pass invalid fields if data is dirty
-                }
-            })
-        }
+        notifTitle = '地點申請已核准'
+        notifMessage = `恭喜！您申請的地點「${locationName}」已通過審核並加入地圖。`
+        
+        // Create location
+        await prisma.location.create({
+             data: {
+                 ...reqData,
+             }
+         })
+
+    } else if (status === 'REJECTED') {
+        notifTitle = '地點申請未通過'
+        notifMessage = `抱歉，您申請的地點「${locationName}」未通過審核。` + (adminReply ? ` 原因：${adminReply}` : '')
+    }
+
+    if (notifTitle) {
+        await prisma.notification.create({
+            data: {
+                userId: updatedRequest.userId,
+                title: notifTitle,
+                message: notifMessage,
+                type: 'APPROVAL',
+                link: '/member/requests'
+            }
+        })
     }
 
     return NextResponse.json(updatedRequest)

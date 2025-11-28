@@ -39,8 +39,8 @@ export default function HistoryPage() {
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-8">
             <h1 className="text-2xl font-bold text-gray-900">我的歷史回覆</h1>
-            <Link href="/" className="text-blue-600 hover:text-blue-800">
-                回首頁
+            <Link href="/member" className="text-blue-600 hover:text-blue-800">
+                ← 回會員中心
             </Link>
         </div>
 
