@@ -7,6 +7,7 @@ import { z } from 'zod'
 import { APIProvider, Map, AdvancedMarker, Pin } from '@vis.gl/react-google-maps'
 import { Location } from '@/types/location'
 import { Trash2, Edit, Check, X } from 'lucide-react'
+import Link from 'next/link'
 
 const locationSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -28,8 +29,6 @@ type LocationFormData = z.infer<typeof locationSchema>
 
 const NTU_CENTER = { lat: 25.0174, lng: 121.5397 }
 
-import Link from 'next/link'
-
 export default function DashboardClient() {
   const [activeTab, setActiveTab] = useState<'locations' | 'reports' | 'requests'>('locations')
   const [locations, setLocations] = useState<Location[]>([])
@@ -37,6 +36,9 @@ export default function DashboardClient() {
   const [requests, setRequests] = useState<any[]>([])
   const [selectedPos, setSelectedPos] = useState<{ lat: number, lng: number } | null>(null)
   const [editingLocation, setEditingLocation] = useState<Location | null>(null)
+  
+  // Reply state
+  const [replyContent, setReplyContent] = useState<{ [key: string]: string }>({})
 
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<LocationFormData>({
     resolver: zodResolver(locationSchema),
@@ -109,9 +111,6 @@ export default function DashboardClient() {
   const handleEdit = (loc: Location) => {
       setEditingLocation(loc)
       setSelectedPos({ lat: loc.lat, lng: loc.lng })
-      // Set form values... (simplified for brevity, assume user fills or we need helper)
-      // Actually, react-hook-form setValue needs individual calls or reset with object
-      // I'll use reset for simplicity
       reset({
           ...loc,
           description: loc.description || '',
@@ -125,15 +124,32 @@ export default function DashboardClient() {
       if (res.ok) fetchLocations()
   }
 
-  const handleRequestAction = async (id: string, status: 'APPROVED' | 'REJECTED') => {
-      const res = await fetch(`/api/requests/${id}`, {
-          method: 'PUT',
+  const handleReportAction = async (id: string, status: 'RESOLVED' | 'PENDING') => {
+      const reply = replyContent[id] || ''
+      const res = await fetch(`/api/reports`, {
+          method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status })
+          body: JSON.stringify({ id, status, adminReply: reply })
+      })
+      if (res.ok) {
+          fetchReports()
+          setReplyContent(prev => ({ ...prev, [id]: '' })) // Clear reply input
+          if (status === 'RESOLVED') alert('回報已解決')
+      }
+  }
+
+  const handleRequestAction = async (id: string, status: 'APPROVED' | 'REJECTED') => {
+      const reply = replyContent[id] || ''
+      const res = await fetch(`/api/requests`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, status, adminReply: reply })
       })
       if (res.ok) {
           fetchRequests()
+          setReplyContent(prev => ({ ...prev, [id]: '' })) // Clear reply input
           if (status === 'APPROVED') alert('已核准並新增地點')
+          else alert('已拒絕申請')
       }
   }
 
@@ -173,7 +189,7 @@ export default function DashboardClient() {
                 href="/"
                 className="px-4 py-2 rounded bg-green-600 text-white hover:bg-blue-700 transition-colors font-medium"
               >
-                儲存
+                回到首頁
               </Link>
           </div>
       </div>
@@ -183,13 +199,11 @@ export default function DashboardClient() {
             <div>
                 <h2 className="text-xl font-bold mb-4">{editingLocation ? 'Edit Location' : 'Add New Location'}</h2>
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 border p-4 rounded bg-gray-800">
-                    {/* Form Inputs - Reusing existing structure */}
-                    {/* Name */}
+                    {/* Form Inputs */}
                     <div>
                         <label className="block text-sm font-medium text-white">Name</label>
                         <input {...register('name')} className="border w-full p-2 rounded text-white bg-gray-800 border-gray-600" />
                     </div>
-                    {/* Type */}
                     <div>
                         <label className="block text-sm font-medium text-white">Type</label>
                         <select {...register('type')} className="border w-full p-2 rounded text-white bg-gray-800 border-gray-600">
@@ -198,18 +212,15 @@ export default function DashboardClient() {
                             <option value="NURSING_ROOM">Nursing Room</option>
                         </select>
                     </div>
-                    {/* Floor */}
                     <div>
                         <label className="block text-sm font-medium text-white">Floor</label>
                         <input {...register('floor')} className="border w-full p-2 rounded text-white bg-gray-800 border-gray-600" />
                     </div>
-                    {/* Description */}
                     <div>
                         <label className="block text-sm font-medium text-white">Description</label>
                         <textarea {...register('description')} className="border w-full p-2 rounded text-white bg-gray-800 border-gray-600" />
                     </div>
                     
-                    {/* Facilities */}
                     <div className="space-y-3 bg-gray-800 p-3 rounded border border-gray-700">
                         <label className="block text-sm font-medium text-white mb-2">Facilities</label>
                         {selectedType === 'TOILET' && (
@@ -303,13 +314,37 @@ export default function DashboardClient() {
               <h2 className="text-xl font-bold mb-4">Member Reports</h2>
               {reports.length === 0 && <p className="text-gray-500">No reports found.</p>}
               {reports.map((report: any) => (
-                  <div key={report.id} className="bg-white p-4 rounded shadow border">
+                  <div key={report.id} className={`bg-white p-4 rounded shadow border ${report.status === 'RESOLVED' ? 'opacity-60' : ''}`}>
                       <div className="flex justify-between">
                           <h3 className="font-bold">{report.location?.name || 'Unknown Location'}</h3>
                           <span className="text-sm text-gray-500">{new Date(report.createdAt).toLocaleDateString()}</span>
                       </div>
                       <p className="text-gray-800 mt-2">{report.content}</p>
                       <div className="text-xs text-gray-500 mt-2">Reported by: {report.user?.name || report.user?.email}</div>
+                      
+                      {report.status === 'PENDING' ? (
+                          <div className="mt-4 border-t pt-2">
+                              <textarea 
+                                  placeholder="輸入回覆內容..." 
+                                  className="w-full p-2 border rounded mb-2 text-sm"
+                                  value={replyContent[report.id] || ''}
+                                  onChange={(e) => setReplyContent({ ...replyContent, [report.id]: e.target.value })}
+                              />
+                              <div className="flex justify-end">
+                                  <button 
+                                      onClick={() => handleReportAction(report.id, 'RESOLVED')}
+                                      className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700"
+                                  >
+                                      解決並回覆
+                                  </button>
+                              </div>
+                          </div>
+                      ) : (
+                          <div className="mt-2 pt-2 border-t">
+                              <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded text-xs font-bold">RESOLVED</span>
+                              {report.adminReply && <p className="text-sm text-gray-600 mt-1">回覆: {report.adminReply}</p>}
+                          </div>
+                      )}
                   </div>
               ))}
           </div>
@@ -325,9 +360,6 @@ export default function DashboardClient() {
                       <button
                           onClick={() => {
                               setSelectedPos({ lat: req.data.lat, lng: req.data.lng })
-                              // Optionally fill the form to let admin see details in form? 
-                              // Or just show pin on map.
-                              // Let's just show pin on map for now.
                           }}
                           className="absolute top-4 right-4 text-blue-500 hover:text-blue-700 z-10"
                           title="View on Map"
@@ -344,19 +376,27 @@ export default function DashboardClient() {
                           </div>
                       </div>
                       
-                      <div className="mt-3 pt-3 border-t flex gap-2 justify-end">
-                          <button 
-                            onClick={() => handleRequestAction(req.id, 'APPROVED')}
-                            className="bg-green-100 text-green-600 px-3 py-1 rounded hover:bg-green-200 flex items-center gap-1 text-sm font-medium"
-                          >
-                              <Check size={16} /> Approve
-                          </button>
-                          <button 
-                            onClick={() => handleRequestAction(req.id, 'REJECTED')}
-                            className="bg-red-100 text-red-600 px-3 py-1 rounded hover:bg-red-200 flex items-center gap-1 text-sm font-medium"
-                          >
-                              <X size={16} /> Reject
-                          </button>
+                      <div className="mt-3 pt-3 border-t">
+                          <textarea 
+                              placeholder="輸入回覆內容..." 
+                              className="w-full p-2 border rounded mb-2 text-sm"
+                              value={replyContent[req.id] || ''}
+                              onChange={(e) => setReplyContent({ ...replyContent, [req.id]: e.target.value })}
+                          />
+                          <div className="flex gap-2 justify-end">
+                              <button 
+                                onClick={() => handleRequestAction(req.id, 'APPROVED')}
+                                className="bg-green-100 text-green-600 px-3 py-1 rounded hover:bg-green-200 flex items-center gap-1 text-sm font-medium"
+                              >
+                                  <Check size={16} /> Approve
+                              </button>
+                              <button 
+                                onClick={() => handleRequestAction(req.id, 'REJECTED')}
+                                className="bg-red-100 text-red-600 px-3 py-1 rounded hover:bg-red-200 flex items-center gap-1 text-sm font-medium"
+                              >
+                                  <X size={16} /> Reject
+                              </button>
+                          </div>
                       </div>
                   </div>
               ))}

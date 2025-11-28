@@ -55,3 +55,48 @@ export async function GET(request: Request) {
   }
 }
 
+// Update Request Status & Reply (Admin)
+export async function PATCH(request: Request) {
+  const session = await getServerSession(authOptions)
+  if (!session || session.user.role !== 'ADMIN') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  try {
+    const body = await request.json()
+    const { id, status, adminReply } = body
+
+    if (!id || !status) {
+        return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
+    }
+
+    const updatedRequest = await prisma.facilityRequest.update({
+      where: { id },
+      data: { 
+        status,
+        adminReply
+      },
+    })
+
+    // If approved, we should actually create the location
+    if (status === 'APPROVED') {
+        // Fetch the full request data
+        const fullReq = await prisma.facilityRequest.findUnique({ where: { id } })
+        if (fullReq) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const locData = fullReq.data as any
+            await prisma.location.create({
+                data: {
+                    ...locData,
+                    // ensure we don't pass invalid fields if data is dirty
+                }
+            })
+        }
+    }
+
+    return NextResponse.json(updatedRequest)
+  } catch (error) {
+    console.error(error)
+    return NextResponse.json({ error: 'Failed to update request' }, { status: 500 })
+  }
+}

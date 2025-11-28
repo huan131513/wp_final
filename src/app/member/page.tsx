@@ -82,9 +82,27 @@ export default function MemberDashboard() {
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <StatCard label="已發表評論" value={profile._count.reviews} icon="📝" />
-            <StatCard label="已回報問題" value={profile._count.reports} icon="📢" />
-            <StatCard label="已申請地點" value={profile._count.requests} icon="📍" />
+            <StatCard 
+                label="已發表評論" 
+                value={profile._count.reviews} 
+                icon="📝" 
+                link="/member/history"
+                linkText="查看紀錄"
+            />
+            <StatCard 
+                label="已回報問題" 
+                value={profile._count.reports} 
+                icon="📢" 
+                link="/member/reports"
+                linkText="查看紀錄"
+            />
+            <StatCard 
+                label="已申請地點" 
+                value={profile._count.requests} 
+                icon="📍" 
+                link="/member/requests"
+                linkText="查看紀錄"
+            />
         </div>
 
         {/* Achievements Section */}
@@ -154,18 +172,12 @@ export default function MemberDashboard() {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <ActionCard 
-                title="評論紀錄" 
-                desc="查看您過去對廁所的所有評價"
-                link="/member/history"
-                linkText="查看紀錄"
-            />
+        <div className="grid grid-cols-1">
             <ActionCard 
                 title="新增地點 / 回報問題" 
-                desc="發現地圖上沒有的廁所？或者現有設施有問題？"
+                desc="發現地圖上沒有的廁所？或者現有設施有問題？點擊返回地圖進行操作。"
                 link="/"
-                linkText="前往地圖操作"
+                linkText="前往地圖"
             />
         </div>
 
@@ -174,26 +186,45 @@ export default function MemberDashboard() {
   )
 }
 
-function StatCard({ label, value, icon }: { label: string, value: number, icon: string }) {
-    return (
-        <div className="bg-white p-6 rounded-2xl shadow-sm flex items-center justify-between">
+function StatCard({ label, value, icon, link, linkText }: { label: string, value: number, icon: string, link?: string, linkText?: string }) {
+    const Content = () => (
+        <div className={`bg-white p-6 rounded-2xl shadow-sm flex items-center justify-between ${link ? 'hover:shadow-md transition-shadow cursor-pointer border border-transparent hover:border-blue-100 group' : ''}`}>
             <div>
-                <p className="text-sm text-gray-500 mb-1">{label}</p>
+                <div className="flex items-center gap-2 mb-1">
+                    <p className="text-sm text-gray-500">{label}</p>
+                    {link && (
+                        <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                            {linkText} ➜
+                        </span>
+                    )}
+                </div>
                 <p className="text-3xl font-bold text-gray-900">{value}</p>
             </div>
             <div className="text-4xl opacity-20 grayscale">{icon}</div>
         </div>
     )
+
+    if (link) {
+        return (
+            <Link href={link} className="block">
+                <Content />
+            </Link>
+        )
+    }
+
+    return <Content />
 }
 
 function ActionCard({ title, desc, link, linkText }: { title: string, desc: string, link: string, linkText: string }) {
     return (
-        <div className="bg-white p-6 rounded-2xl shadow-sm">
-            <h3 className="font-bold text-lg text-gray-900 mb-2">{title}</h3>
-            <p className="text-gray-500 text-sm mb-4">{desc}</p>
+        <div className="bg-white p-6 rounded-2xl shadow-sm text-center md:text-left md:flex md:items-center md:justify-between">
+            <div className="mb-4 md:mb-0">
+                <h3 className="font-bold text-lg text-gray-900 mb-1">{title}</h3>
+                <p className="text-gray-500 text-sm">{desc}</p>
+            </div>
             <Link 
                 href={link}
-                className="block w-full text-center py-2 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors"
+                className="inline-block py-2 px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors shadow-sm shadow-blue-200"
             >
                 {linkText}
             </Link>
