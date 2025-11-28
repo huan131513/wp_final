@@ -8,7 +8,7 @@ export interface Location {
   lat: number;
   lng: number;
   floor: string | null;
-  
+
   hasTissue: boolean;
   hasDryer: boolean;
   hasSeat: boolean;
@@ -19,7 +19,7 @@ export interface Location {
 
   createdAt: Date;
   updatedAt: Date;
-  
+
   reviews?: Review[];
 }
 

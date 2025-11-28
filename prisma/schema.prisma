@@ -14,8 +14,9 @@ model User {
   
   bio       String?  // 新增：個人簡介
   avatar    String?  // 新增：頭像 (儲存 Emoji 或 URL)
-
+  
   reviews   Review[]
+  reviewLikes ReviewLike[] // 新增：評論點讚關聯
   reports   Report[]
   requests  FacilityRequest[]
   achievements UserAchievement[]
@@ -99,10 +100,23 @@ model Review {
   user        User?    @relation(fields: [userId], references: [id])
   
   userName    String   // Keeping for guest/legacy reviews if needed, or just snapshot
-  rating      Int      // 1-5 stars
+  rating      Int?     // 1-5 stars (null for replies)
   comment     String
   
+  // 新增：回覆功能
+  parentId    String?  // 回覆的父評論 ID（null 表示頂層評論）
+  parent      Review?  @relation("ReviewReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies     Review[] @relation("ReviewReplies")
+  
+  // 新增：編輯和刪除功能
+  editedAt    DateTime? // 編輯時間（null 表示未編輯過）
+  isDeleted   Boolean   @default(false) // 軟刪除標記
+  
+  // 新增：點讚功能
+  likes       ReviewLike[]
+  
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
 }
 
 model Report {
@@ -177,4 +191,15 @@ enum RequestStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+model ReviewLike {
+  id        String   @id @default(uuid())
+  reviewId  String
+  review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([reviewId, userId]) // 防止重複點讚
 }

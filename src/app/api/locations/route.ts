@@ -22,21 +22,91 @@ const locationSchema = z.object({
 
 export async function GET() {
   try {
+    const session = await getServerSession(authOptions)
+    const currentUserId = session?.user?.id
+
     const locations = await prisma.location.findMany({
-        include: {
-            reviews: {
-                orderBy: { createdAt: 'desc' },
-                include: {
-                    user: {
-                        select: {
-                            avatar: true
-                        }
-                    }
-                }
-            }
+      include: {
+        reviews: {
+          where: {
+            parentId: null, // 只獲取頂層評論
+            isDeleted: false
+          },
+          orderBy: { createdAt: 'desc' },
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                avatar: true
+              }
+            },
+            replies: {
+              where: {
+                isDeleted: false
+              },
+              orderBy: { createdAt: 'asc' },
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    name: true,
+                    avatar: true
+                  }
+                },
+                _count: {
+                  select: {
+                    likes: true
+                  }
+                },
+                likes: currentUserId ? {
+                  where: {
+                    userId: currentUserId
+                  },
+                  select: {
+                    id: true
+                  }
+                } : false
+              }
+            },
+            _count: {
+              select: {
+                likes: true,
+                replies: true
+              }
+            },
+            likes: currentUserId ? {
+              where: {
+                userId: currentUserId
+              },
+              select: {
+                id: true
+              }
+            } : false
+          }
         }
+      }
     })
-    return NextResponse.json(locations)
+
+    // 處理評論資料，添加 isLiked 標記
+    const processedLocations = locations.map(location => ({
+      ...location,
+      reviews: location.reviews.map((review: any) => ({
+        ...review,
+        isLiked: review.likes && review.likes.length > 0,
+        likesCount: review._count.likes,
+        repliesCount: review._count.replies,
+        replies: review.replies.map((reply: any) => ({
+          ...reply,
+          isLiked: reply.likes && reply.likes.length > 0,
+          likesCount: reply._count.likes
+        })),
+        likes: undefined, // 移除原始 likes 陣列
+        _count: undefined // 移除 _count
+      }))
+    }))
+
+    return NextResponse.json(processedLocations)
   } catch (error) {
     console.error(error)
     return NextResponse.json({ error: 'Failed to fetch locations' }, { status: 500 })
@@ -52,11 +122,11 @@ export async function POST(request: Request) {
   try {
     const body = await request.json()
     const validatedData = locationSchema.parse(body)
-    
+
     const location = await prisma.location.create({
       data: validatedData,
     })
-    
+
     return NextResponse.json(location)
   } catch (error) {
     console.error(error)
