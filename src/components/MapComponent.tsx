@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from 'react'
 import { APIProvider, Map, AdvancedMarker, Pin, InfoWindow, useMap, useMapsLibrary } from '@vis.gl/react-google-maps'
 import type { Location, LocationType } from '@/types/location'
 import { useSession } from 'next-auth/react'
+import { Heart } from 'lucide-react'
+import toast from 'react-hot-toast'
 
 const NTU_CENTER = { lat: 25.0174, lng: 121.5397 }
 
@@ -13,9 +15,19 @@ interface MapComponentProps {
   onLocationSelect: (location: Location | null) => void
   onReviewAdded?: () => void
   userLocation: { lat: number, lng: number } | null
+  savedLocationIds: Set<string>
+  onSavedLocationsChange: () => void
 }
 
-export default function MapComponent({ locations, selectedLocation, onLocationSelect, onReviewAdded, userLocation }: MapComponentProps) {
+export function MapComponent({ 
+    locations, 
+    selectedLocation, 
+    onLocationSelect, 
+    onReviewAdded, 
+    userLocation,
+    savedLocationIds,
+    onSavedLocationsChange
+}: MapComponentProps) {
   const { data: session } = useSession()
   const [map, setMap] = useState<google.maps.Map | null>(null)
     const [isReportModalOpen, setIsReportModalOpen] = useState(false)
@@ -24,13 +36,9 @@ export default function MapComponent({ locations, selectedLocation, onLocationSe
     const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null)
     const [navigationInfo, setNavigationInfo] = useState<{ duration: string, distance: string } | null>(null)
 
-    // Use local variable to avoid state update on every keystroke causing focus loss if re-rendered incorrectly
-    // But here re-render is expected. The issue might be the InfoWindow or Map re-rendering aggressively.
-    // Let's try to stop propagation of click events on the textarea to prevent map interactions.
-    
     const handleNavigate = () => {
         if (!userLocation || !selectedLocation) {
-            alert('無法取得您的位置或目標位置')
+            toast.error('無法取得您的位置或目標位置')
             return
         }
 
@@ -55,7 +63,7 @@ export default function MapComponent({ locations, selectedLocation, onLocationSe
                     }
                     onLocationSelect(null) // Close info window when navigation starts
                 } else {
-                    alert('無法規劃路線: ' + status)
+                    toast.error('無法規劃路線: ' + status)
                 }
             }
         )
@@ -64,6 +72,40 @@ export default function MapComponent({ locations, selectedLocation, onLocationSe
     const handleCancelNavigation = () => {
         setDirections(null)
         setNavigationInfo(null)
+    }
+
+    const handleToggleSave = async () => {
+        if (!selectedLocation || !session) return
+
+        const isSaved = savedLocationIds.has(selectedLocation.id)
+        const method = isSaved ? 'DELETE' : 'POST'
+        const url = isSaved 
+            ? `/api/user/saved-locations?locationId=${selectedLocation.id}`
+            : '/api/user/saved-locations'
+        
+        const body = isSaved ? undefined : JSON.stringify({ locationId: selectedLocation.id })
+
+        try {
+            const res = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body
+            })
+
+            if (res.ok) {
+                if (isSaved) {
+                    toast.success('已取消收藏')
+                } else {
+                    toast.success('已收藏地點')
+                }
+                onSavedLocationsChange()
+            } else {
+                toast.error('操作失敗')
+            }
+        } catch (e) {
+            console.error(e)
+            toast.error('操作失敗')
+        }
     }
 
     const handleReportSubmit = async () => {
@@ -80,14 +122,15 @@ export default function MapComponent({ locations, selectedLocation, onLocationSe
           })
           
           if (res.ok) {
-              alert('感謝您的回報！我們會盡快處理。')
+              toast.success('感謝您的回報！我們會盡快處理。')
               setIsReportModalOpen(false)
               setReportContent('')
           } else {
-              alert('回報失敗，請稍後再試')
+              toast.error('回報失敗，請稍後再試')
           }
       } catch (e) {
-          alert('回報失敗')
+          console.error(e)
+          toast.error('回報失敗')
       }
   }
 
@@ -163,10 +206,19 @@ export default function MapComponent({ locations, selectedLocation, onLocationSe
                         {selectedLocation.type === 'ACCESSIBLE_TOILET' && '♿'}
                         {selectedLocation.type === 'NURSING_ROOM' && '🍼'}
                     </div>
-                    <div className="w-100">
+                    <div className="w-100 flex-1">
                         <div className="flex justify-between gap-2 ">
                             <h3 className="font-bold text-xl text-gray-900 leading-none">{selectedLocation.name}</h3>
                             <div className="flex gap-1">
+                                {session && (
+                                    <button
+                                        onClick={handleToggleSave}
+                                        className={`p-1.5 rounded shadow-sm transition-colors ${savedLocationIds.has(selectedLocation.id) ? 'bg-pink-100 text-pink-500' : 'bg-gray-100 text-gray-400 hover:text-pink-400'}`}
+                                        title={savedLocationIds.has(selectedLocation.id) ? '取消收藏' : '收藏'}
+                                    >
+                                        <Heart size={14} fill={savedLocationIds.has(selectedLocation.id) ? 'currentColor' : 'none'} />
+                                    </button>
+                                )}
                                 <button
                                     onClick={() => handleNavigate()}
                                     className="bg-blue-500 hover:bg-blue-600 text-white text-xs px-2 py-1 rounded shadow-sm transition-colors whitespace-nowrap"
@@ -345,10 +397,11 @@ function ReviewSection({ locationId, reviews, onReviewAdded }: { locationId: str
                 setRating(5)
                 // Trigger parent refresh to ensure data consistency
                 if (onReviewAdded) onReviewAdded()
+                toast.success('評論已送出')
             }
         } catch (err) {
             console.error(err)
-            alert('Failed to submit review')
+            toast.error('評論送出失敗')
         }
     }
 
@@ -357,7 +410,7 @@ function ReviewSection({ locationId, reviews, onReviewAdded }: { locationId: str
             <div className="flex items-center justify-between mb-3">
                 <h4 className="font-bold text-gray-900">評論</h4>
                 <div className="flex text-yellow-400 text-sm">
-                    {'★'.repeat(Math.round(localReviews.reduce((acc, r) => acc + r.rating, 0) / (localReviews.length || 1)))}
+                    {'★'.repeat(Math.round(localReviews.reduce((acc: number, r: any) => acc + r.rating, 0) / (localReviews.length || 1)))}
                     <span className="text-gray-400 ml-1">({localReviews.length})</span>
                 </div>
             </div>
@@ -419,7 +472,7 @@ function ReviewSection({ locationId, reviews, onReviewAdded }: { locationId: str
                 </form>
             )}
 
-            <div className="space-y-3 max-h-[200px] overflow-y-auto pr-1">
+            <div className="space-y-3 max-h-[200px] overflow-y-auto pr-1 custom-scrollbar">
                 {localReviews.map((review: any) => (
                     <div key={review.id} className="bg-gray-50 p-3 rounded-lg border border-gray-100">
                         <div className="flex items-center justify-between mb-1">
@@ -536,6 +589,7 @@ function Directions({ directions }: { directions: google.maps.DirectionsResult |
             suppressMarkers: false, // Show A/B markers
             preserveViewport: false // Let map fit bounds
         })
+        // Do not set state here directly during render if possible, but useEffect is fine.
         setDirectionsService(new routesLibrary.DirectionsService())
         setDirectionsRenderer(renderer)
 
@@ -557,4 +611,3 @@ function Directions({ directions }: { directions: google.maps.DirectionsResult |
 
     return null
 }
-

@@ -36,7 +36,7 @@ export async function POST(request: Request) {
 }
 
 // Get Reports (Admin)
-export async function GET(request: Request) {
+export async function GET() {
   const session = await getServerSession(authOptions)
   if (!session || session.user.role !== 'ADMIN') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -52,6 +52,7 @@ export async function GET(request: Request) {
     })
     return NextResponse.json(reports)
   } catch (error) {
+    console.error(error)
     return NextResponse.json({ error: 'Failed to fetch reports' }, { status: 500 })
   }
 }
@@ -77,7 +78,21 @@ export async function PATCH(request: Request) {
         status,
         adminReply
       },
+      include: { location: true } // Include location to get name for notification
     })
+
+    // Create Notification if admin replied
+    if (adminReply) {
+        await prisma.notification.create({
+            data: {
+                userId: updatedReport.userId,
+                title: '問題回報更新',
+                message: `管理員已回覆您關於「${updatedReport.location.name}」的回報：${adminReply}`,
+                type: 'REPLY',
+                link: '/member/reports'
+            }
+        })
+    }
 
     return NextResponse.json(updatedReport)
   } catch (error) {

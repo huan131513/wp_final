@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useForm, UseFormRegister } from 'react-hook-form'
+import { useForm, UseFormRegister, Path, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { APIProvider, Map, AdvancedMarker, Pin } from '@vis.gl/react-google-maps'
@@ -29,7 +29,7 @@ const NTU_CENTER = { lat: 25.0174, lng: 121.5397 }
 export default function RequestFacilityModal({ onClose }: { onClose: () => void }) {
     const [selectedPos, setSelectedPos] = useState<{ lat: number, lng: number } | null>(null)
 
-    const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<LocationFormData>({
+    const { register, handleSubmit, setValue, control, formState: { errors } } = useForm<LocationFormData>({
         resolver: zodResolver(locationSchema),
         defaultValues: {
             type: 'TOILET',
@@ -45,7 +45,10 @@ export default function RequestFacilityModal({ onClose }: { onClose: () => void 
         }
     })
 
-    const selectedType = watch('type')
+    const selectedType = useWatch({
+        control,
+        name: 'type',
+    })
 
     const onSubmit = async (data: LocationFormData) => {
         try {
@@ -62,10 +65,12 @@ export default function RequestFacilityModal({ onClose }: { onClose: () => void 
                 alert('申請失敗')
             }
         } catch (e) {
+            console.error(e)
             alert('申請失敗')
         }
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handleMapClick = (e: any) => {
         if (e.detail.latLng) {
             const { lat, lng } = e.detail.latLng
@@ -167,7 +172,7 @@ export default function RequestFacilityModal({ onClose }: { onClose: () => void 
     )
 }
 
-function FacilityCheckbox({ id, label, icon, register }: { id: any, label: string, icon: string, register: UseFormRegister<any> }) {
+function FacilityCheckbox({ id, label, icon, register }: { id: Path<LocationFormData>, label: string, icon: string, register: UseFormRegister<LocationFormData> }) {
     return (
         <div className="flex items-center justify-between p-2 hover:bg-gray-600 rounded transition-colors">
             <div className="flex items-center gap-3">
@@ -183,4 +188,3 @@ function FacilityCheckbox({ id, label, icon, register }: { id: any, label: strin
         </div>
     )
 }
-

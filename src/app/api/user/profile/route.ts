@@ -36,13 +36,13 @@ export async function GET() {
 
     // 1. Get all defined achievements
     const allAchievements = await prisma.achievement.findMany()
-    const newUnlocked = []
-
+    
     // 2. Check for new unlocks & Calculate progress
     const processedAchievements = []
     
     for (const ach of allAchievements) {
         // Check if already unlocked
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const userAch = user.achievements.find((ua: any) => ua.achievementId === ach.id)
         let isUnlocked = !!userAch
         let progress = 0
@@ -65,7 +65,6 @@ export async function GET() {
             })
             isUnlocked = true
             progress = 100
-            newUnlocked.push(ach)
         }
 
         processedAchievements.push({
@@ -93,4 +92,30 @@ export async function GET() {
     console.error('Profile fetch error:', error)
     return new NextResponse('Internal Server Error', { status: 500 })
   }
+}
+
+export async function PATCH(request: Request) {
+    const session = await getServerSession(authOptions)
+
+    if (!session?.user?.name) {
+        return new NextResponse('Unauthorized', { status: 401 })
+    }
+
+    try {
+        const body = await request.json()
+        const { bio, avatar } = body
+
+        const updatedUser = await prisma.user.update({
+            where: { name: session.user.name },
+            data: {
+                bio,
+                avatar
+            }
+        })
+
+        return NextResponse.json(updatedUser)
+    } catch (error) {
+        console.error('Profile update error:', error)
+        return new NextResponse('Internal Server Error', { status: 500 })
+    }
 }

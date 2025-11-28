@@ -1,22 +1,24 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import MapComponent from '@/components/MapComponent'
+import { useState, useEffect, useMemo, useCallback } from 'react'
+import { MapComponent } from '@/components/MapComponent'
 import { Location, LocationType } from '@/types/location'
 import Link from 'next/link'
 import { useSession, signOut } from 'next-auth/react'
 import RequestFacilityModal from '@/components/RequestFacilityModal'
+import { NotificationBell } from '@/components/NotificationBell'
+import { Heart } from 'lucide-react'
 
 export default function Home() {
   const { data: session } = useSession()
   const [locations, setLocations] = useState<Location[]>([])
-  const [filteredLocations, setFilteredLocations] = useState<Location[]>([])
-  const [selectedType, setSelectedType] = useState<LocationType | 'ALL'>('ALL')
+  const [selectedType, setSelectedType] = useState<LocationType | 'ALL' | 'SAVED'>('ALL')
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [userLocation, setUserLocation] = useState<{ lat: number, lng: number } | null>(null)
   const [isMobileExpanded, setIsMobileExpanded] = useState(false)
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false)
+  const [savedLocationIds, setSavedLocationIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -40,33 +42,67 @@ export default function Home() {
     }
   }, [])
 
-  const fetchLocations = async () => {
+  const fetchLocations = useCallback(async () => {
     try {
       const res = await fetch('/api/locations')
       const data = await res.json()
       if (Array.isArray(data)) {
         setLocations(data)
         // Update selected location with new data if it exists
-        if (selectedLocation) {
-          const updatedSelected = data.find(l => l.id === selectedLocation.id)
-          if (updatedSelected) setSelectedLocation(updatedSelected)
-        }
+        // We need to be careful about setting state based on selectedLocation here to avoid loops
+        // Instead, just update locations list.
       }
       setIsLoading(false)
     } catch (err) {
       console.error(err)
       setIsLoading(false)
     }
-  }
+  }, []) 
+
+  const fetchSavedLocations = useCallback(async () => {
+    if (!session) {
+      setSavedLocationIds(new Set())
+      return
+    }
+    try {
+      const res = await fetch('/api/user/saved-locations')
+      if (res.ok) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const data: any[] = await res.json()
+        setSavedLocationIds(new Set(data.map(item => item.location.id)))
+      }
+    } catch (error) {
+      console.error('Failed to fetch saved locations', error)
+    }
+  }, [session])
+
+  useEffect(() => {
+    fetchSavedLocations()
+  }, [fetchSavedLocations])
+
+  // Update selected location when locations list changes
+  useEffect(() => {
+      if (selectedLocation && locations.length > 0) {
+          const updatedSelected = locations.find(l => l.id === selectedLocation.id)
+          if (updatedSelected && updatedSelected !== selectedLocation) {
+              setSelectedLocation(updatedSelected)
+          }
+      }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locations])
 
   useEffect(() => {
     fetchLocations()
-  }, [])
+  }, [fetchLocations])
 
-  useEffect(() => {
-    let filtered = selectedType === 'ALL'
-      ? locations
-      : locations.filter(loc => loc.type === selectedType)
+  const filteredLocations = useMemo(() => {
+    let filtered = locations
+
+    if (selectedType === 'SAVED') {
+      filtered = locations.filter(loc => savedLocationIds.has(loc.id))
+    } else if (selectedType !== 'ALL') {
+      filtered = locations.filter(loc => loc.type === selectedType)
+    }
 
     if (userLocation) {
       filtered = [...filtered].sort((a, b) => {
@@ -75,9 +111,8 @@ export default function Home() {
         return distA - distB
       })
     }
-
-    setFilteredLocations(filtered)
-  }, [selectedType, locations, userLocation])
+    return filtered
+  }, [selectedType, locations, userLocation, savedLocationIds])
 
   const handleLocationSelect = (loc: Location | null) => {
     setSelectedLocation(loc)
@@ -99,6 +134,7 @@ export default function Home() {
           <nav className="flex gap-4 items-center">
             {session ? (
               <>
+                <NotificationBell />
                 <span className="text-sm text-gray-600 hidden md:inline">Hi, {session.user?.name}</span>
                 {session.user?.role === 'ADMIN' && (
                   <Link href="/admin/dashboard" className="text-sm font-medium text-blue-600 hover:text-blue-800">
@@ -186,6 +222,15 @@ export default function Home() {
                 label="哺乳室"
                 count={locations.filter(l => l.type === 'NURSING_ROOM').length}
               />
+              {session && (
+                  <FilterButton
+                  active={selectedType === 'SAVED'}
+                  onClick={() => setSelectedType('SAVED')}
+                  icon={<Heart size={16} className="text-pink-500 fill-pink-500" />}
+                  label="我的最愛"
+                  count={locations.filter(l => savedLocationIds.has(l.id)).length}
+                />
+              )}
             </div>
           </div>
 
@@ -261,6 +306,8 @@ export default function Home() {
             onLocationSelect={handleLocationSelect}
             onReviewAdded={fetchLocations}
             userLocation={userLocation}
+            savedLocationIds={savedLocationIds}
+            onSavedLocationsChange={fetchSavedLocations}
           />
 
           {/* Mobile Filter Toggle (Visible only on small screens) */}
@@ -269,7 +316,7 @@ export default function Home() {
             {['ALL', 'TOILET', 'ACCESSIBLE_TOILET', 'NURSING_ROOM'].map((type) => (
               <button
                 key={type}
-                onClick={() => setSelectedType(type as any)}
+                onClick={() => setSelectedType(type as LocationType | 'ALL')}
                 className={`px-4 py-2 rounded-full text-xs font-bold shadow-md whitespace-nowrap ${selectedType === type
                     ? 'bg-blue-600 text-white'
                     : 'bg-white text-gray-700'
@@ -278,6 +325,19 @@ export default function Home() {
                 {type === 'ALL' ? 'All' : formatType(type as string)}
               </button>
             ))}
+            {session && (
+                 <button
+                 key="SAVED"
+                 onClick={() => setSelectedType('SAVED')}
+                 className={`px-4 py-2 rounded-full text-xs font-bold shadow-md whitespace-nowrap flex items-center gap-1 ${selectedType === 'SAVED'
+                     ? 'bg-blue-600 text-white'
+                     : 'bg-white text-gray-700'
+                   }`}
+               >
+                 <Heart size={12} className={selectedType === 'SAVED' ? 'fill-white' : 'fill-none'} />
+                 我的最愛
+               </button>
+            )}
           </div>
         </div>
       </main>

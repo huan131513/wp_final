@@ -12,10 +12,15 @@ model User {
   password  String
   role      Role     @default(MEMBER)
   
+  bio       String?  // 新增：個人簡介
+  avatar    String?  // 新增：頭像 (儲存 Emoji 或 URL)
+
   reviews   Review[]
   reports   Report[]
   requests  FacilityRequest[]
   achievements UserAchievement[]
+  savedLocations SavedLocation[] // 新增：收藏關聯
+  notifications  Notification[]  // 新增：通知關聯
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -47,9 +52,42 @@ model Location {
 
   reviews     Review[]
   reports     Report[]
+  savedBy     SavedLocation[] // 新增：被收藏關聯
 
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+}
+
+// ... existing models ...
+
+model SavedLocation {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  locationId String
+  location  Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, locationId])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  title     String
+  message   String
+  type      NotificationType
+  isRead    Boolean  @default(false)
+  link      String?
+  createdAt DateTime @default(now())
+}
+
+enum NotificationType {
+  SYSTEM
+  REPLY
+  APPROVAL
+  ACHIEVEMENT
 }
 
 model Review {
