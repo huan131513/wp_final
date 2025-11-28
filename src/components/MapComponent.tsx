@@ -6,6 +6,7 @@ import type { Location, LocationType } from '@/types/location'
 import { useSession } from 'next-auth/react'
 import { Heart } from 'lucide-react'
 import toast from 'react-hot-toast'
+import Link from 'next/link'
 
 const NTU_CENTER = { lat: 25.0174, lng: 121.5397 }
 
@@ -476,12 +477,30 @@ function ReviewSection({ locationId, reviews, onReviewAdded }: { locationId: str
                 {localReviews.map((review: any) => (
                     <div key={review.id} className="bg-gray-50 p-3 rounded-lg border border-gray-100">
                         <div className="flex items-center justify-between mb-1">
-                            <div className="flex items-center gap-2">
-                                <div className="w-5 h-5 rounded-full bg-gray-300 flex items-center justify-center text-[10px] text-white font-bold">
-                                    {review.userName.charAt(0).toUpperCase()}
+                            {review.userId ? (
+                                <Link 
+                                    href={`/user/${encodeURIComponent(review.userName)}`}
+                                    className="flex items-center gap-2 hover:opacity-80 transition-opacity group"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    <div className="w-5 h-5 rounded-full bg-gray-300 flex items-center justify-center text-[10px] text-white font-bold overflow-hidden">
+                                        {review.user?.avatar && review.user.avatar.startsWith('data:image') ? (
+                                            // eslint-disable-next-line @next/next/no-img-element
+                                            <img src={review.user.avatar} alt={review.userName} className="w-full h-full object-cover" />
+                                        ) : (
+                                            (review.user?.avatar || review.userName.charAt(0).toUpperCase())
+                                        )}
+                                    </div>
+                                    <span className="font-medium text-sm text-blue-600 group-hover:underline">{review.userName}</span>
+                                </Link>
+                            ) : (
+                                <div className="flex items-center gap-2">
+                                    <div className="w-5 h-5 rounded-full bg-gray-300 flex items-center justify-center text-[10px] text-white font-bold">
+                                        {review.userName.charAt(0).toUpperCase()}
+                                    </div>
+                                    <span className="font-medium text-sm text-gray-900">{review.userName}</span>
                                 </div>
-                                <span className="font-medium text-sm text-gray-900">{review.userName}</span>
-                            </div>
+                            )}
                             <span className="text-yellow-400 text-xs">{'★'.repeat(review.rating)}</span>
                         </div>
                         <p className="text-sm text-gray-700 mb-1">{review.comment}</p>
