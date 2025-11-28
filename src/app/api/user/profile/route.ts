@@ -43,7 +43,7 @@ export async function GET() {
     
     for (const ach of allAchievements) {
         // Check if already unlocked
-        const userAch = user.achievements.find(ua => ua.achievementId === ach.id)
+        const userAch = user.achievements.find((ua: any) => ua.achievementId === ach.id)
         let isUnlocked = !!userAch
         let progress = 0
         let currentVal = 0
