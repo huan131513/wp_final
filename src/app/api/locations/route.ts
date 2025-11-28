@@ -25,7 +25,14 @@ export async function GET() {
     const locations = await prisma.location.findMany({
         include: {
             reviews: {
-                orderBy: { createdAt: 'desc' }
+                orderBy: { createdAt: 'desc' },
+                include: {
+                    user: {
+                        select: {
+                            avatar: true
+                        }
+                    }
+                }
             }
         }
     })

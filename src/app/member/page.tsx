@@ -3,7 +3,7 @@
 import { useSession } from 'next-auth/react'
 import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
-import { Edit, Key, Heart, Trash2, Crown, Upload } from 'lucide-react'
+import { Edit, Key, Heart, Trash2, Crown, Upload, Camera } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { NotificationBell } from '@/components/NotificationBell'
 
@@ -114,13 +114,21 @@ export default function MemberDashboard() {
         {/* Header & Profile Card */}
         <div className="bg-white rounded-2xl p-6 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative">
             <div className="flex items-center gap-4">
-                <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-700 rounded-full flex items-center justify-center shadow-md overflow-hidden">
+                <div 
+                    className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-700 rounded-full flex items-center justify-center shadow-md overflow-hidden relative group cursor-pointer"
+                    onClick={() => setIsEditProfileOpen(true)}
+                    title="點擊更換頭像"
+                >
                     {profile.avatar && profile.avatar.startsWith('data:image') ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={profile.avatar} alt="Avatar" className="w-full h-full object-cover" />
                     ) : (
                         <span className="text-3xl text-white font-bold">{profile.avatar || profile.name.charAt(0).toUpperCase()}</span>
                     )}
+                    {/* Hover Overlay */}
+                    <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Camera className="text-white w-6 h-6" />
+                    </div>
                 </div>
                 <div>
                     <div className="flex items-center gap-2">
@@ -214,17 +222,15 @@ export default function MemberDashboard() {
                                     <h3 className={`font-bold text-sm ${ach.isUnlocked ? 'text-gray-900' : 'text-gray-500'}`}>{ach.name}</h3>
                                     <p className="text-[10px] text-gray-500 mt-1 h-8 flex items-center justify-center">{ach.description}</p>
                                 </div>
-                                <div className="mt-2">
+                                <div className="mt-2 w-full bg-gray-200 rounded-full h-1 overflow-hidden">
                                     <div className="flex justify-between text-[10px] text-gray-400 mb-1">
                                         <span>進度</span>
                                         <span>{ach.currentVal} / {ach.threshold}</span>
                                     </div>
-                                    <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
-                                        <div 
-                                            className={`h-full rounded-full transition-all duration-500 ${ach.isUnlocked ? 'bg-yellow-400' : 'bg-gray-400'}`}
-                                            style={{ width: `${ach.progress}%` }}
-                                        />
-                                    </div>
+                                    <div 
+                                        className={`h-full rounded-full transition-all duration-500 ${ach.isUnlocked ? 'bg-yellow-400' : 'bg-gray-400'}`}
+                                        style={{ width: `${ach.progress}%` }}
+                                    />
                                 </div>
                             </div>
                         ))}
@@ -260,7 +266,7 @@ export default function MemberDashboard() {
                                 <div className="flex-1 min-w-0">
                                     <p className="text-sm font-bold text-gray-900 truncate">{user.name}</p>
                                     <p className="text-[10px] text-gray-500">
-                                        {user.counts.reviews} 評論 • {user.counts.reports} 回報
+                                        {user.counts.reviews} 評論 • {user.counts.reports} 回報 • {user.counts.requests} 申請
                                     </p>
                                 </div>
                                 <div className="text-xs font-bold text-blue-600">
