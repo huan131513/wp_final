@@ -71,6 +71,7 @@ model Report {
   id          String   @id @default(uuid())
   content     String
   status      ReportStatus @default(PENDING)
+  adminReply  String?      // 新增：管理員回覆
   
   locationId  String
   location    Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
@@ -86,6 +87,7 @@ model FacilityRequest {
   id          String   @id @default(uuid())
   data        Json     // Stores the location data to be added
   status      RequestStatus @default(PENDING)
+  adminReply  String?      // 新增：管理員回覆
   
   userId      String
   user        User     @relation(fields: [userId], references: [id])

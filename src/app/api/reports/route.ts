@@ -56,3 +56,32 @@ export async function GET(request: Request) {
   }
 }
 
+// Update Report Status & Reply (Admin)
+export async function PATCH(request: Request) {
+  const session = await getServerSession(authOptions)
+  if (!session || session.user.role !== 'ADMIN') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  try {
+    const body = await request.json()
+    const { id, status, adminReply } = body
+
+    if (!id || !status) {
+        return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
+    }
+
+    const updatedReport = await prisma.report.update({
+      where: { id },
+      data: { 
+        status,
+        adminReply
+      },
+    })
+
+    return NextResponse.json(updatedReport)
+  } catch (error) {
+    console.error(error)
+    return NextResponse.json({ error: 'Failed to update report' }, { status: 500 })
+  }
+}
