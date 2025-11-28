@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { APIProvider, Map, AdvancedMarker, Pin, InfoWindow, useMap } from '@vis.gl/react-google-maps'
+import { APIProvider, Map, AdvancedMarker, Pin, InfoWindow, useMap, useMapsLibrary } from '@vis.gl/react-google-maps'
 import type { Location, LocationType } from '@/types/location'
 import { useSession } from 'next-auth/react'
 
@@ -21,11 +21,51 @@ export default function MapComponent({ locations, selectedLocation, onLocationSe
     const [isReportModalOpen, setIsReportModalOpen] = useState(false)
     const [reportContent, setReportContent] = useState('')
     const reportInputRef = useRef<HTMLTextAreaElement>(null)
+    const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null)
+    const [navigationInfo, setNavigationInfo] = useState<{ duration: string, distance: string } | null>(null)
 
     // Use local variable to avoid state update on every keystroke causing focus loss if re-rendered incorrectly
     // But here re-render is expected. The issue might be the InfoWindow or Map re-rendering aggressively.
     // Let's try to stop propagation of click events on the textarea to prevent map interactions.
     
+    const handleNavigate = () => {
+        if (!userLocation || !selectedLocation) {
+            alert('無法取得您的位置或目標位置')
+            return
+        }
+
+        const service = new google.maps.DirectionsService()
+        service.route(
+            {
+                origin: userLocation,
+                destination: { lat: selectedLocation.lat, lng: selectedLocation.lng },
+                travelMode: google.maps.TravelMode.WALKING,
+            },
+            (result, status) => {
+                if (status === 'OK' && result) {
+                    setDirections(result)
+                    // Extract duration and distance
+                    const route = result.routes[0]
+                    const leg = route.legs[0]
+                    if (leg.duration && leg.distance) {
+                        setNavigationInfo({
+                            duration: leg.duration.text,
+                            distance: leg.distance.text
+                        })
+                    }
+                    onLocationSelect(null) // Close info window when navigation starts
+                } else {
+                    alert('無法規劃路線: ' + status)
+                }
+            }
+        )
+    }
+
+    const handleCancelNavigation = () => {
+        setDirections(null)
+        setNavigationInfo(null)
+    }
+
     const handleReportSubmit = async () => {
       if (!selectedLocation || !session) return
       
@@ -71,6 +111,27 @@ export default function MapComponent({ locations, selectedLocation, onLocationSe
           mapTypeControl={false}
         >
            <MapHandler onMapLoad={setMap} />
+           <Directions directions={directions} />
+           
+           {/* Navigation Info Overlay */}
+           {navigationInfo && (
+               <div className="absolute bottom-4 left-4 right-4 z-10 bg-white p-4 rounded-xl shadow-lg border border-gray-200 flex justify-between items-center animate-slide-up">
+                   <div>
+                       <p className="text-xs text-gray-500">步行時間</p>
+                       <div className="flex items-baseline gap-2">
+                           <span className="text-2xl font-bold text-blue-600">{navigationInfo.duration}</span>
+                           <span className="text-sm text-gray-600">({navigationInfo.distance})</span>
+                       </div>
+                   </div>
+                   <button 
+                       onClick={handleCancelNavigation}
+                       className="bg-red-100 text-red-600 px-4 py-2 rounded-lg font-medium hover:bg-red-200 transition-colors text-sm"
+                   >
+                       取消導航
+                   </button>
+               </div>
+           )}
+
            {userLocation && (
                <AdvancedMarker position={userLocation}>
                    <div className="relative w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow-lg">
@@ -105,14 +166,22 @@ export default function MapComponent({ locations, selectedLocation, onLocationSe
                     <div className="w-100">
                         <div className="flex justify-between gap-2 ">
                             <h3 className="font-bold text-xl text-gray-900 leading-none">{selectedLocation.name}</h3>
-                            {session && (
+                            <div className="flex gap-1">
                                 <button
-                                    onClick={() => setIsReportModalOpen(true)}
-                                    className="bg-yellow-400 hover:bg-yellow-500 text-white text-xs px-2 py-1 rounded shadow-sm transition-colors whitespace-nowrap"
+                                    onClick={() => handleNavigate()}
+                                    className="bg-blue-500 hover:bg-blue-600 text-white text-xs px-2 py-1 rounded shadow-sm transition-colors whitespace-nowrap"
                                 >
-                                    回報
+                                    導航
                                 </button>
-                            )}
+                                {session && (
+                                    <button
+                                        onClick={() => setIsReportModalOpen(true)}
+                                        className="bg-yellow-400 hover:bg-yellow-500 text-white text-xs px-2 py-1 rounded shadow-sm transition-colors whitespace-nowrap"
+                                    >
+                                        回報
+                                    </button>
+                                )}
+                            </div>
                         </div>
                         <div className="text-sm font-medium text-gray-500 mt-1">
                             {formatLocationType(selectedLocation.type)}
@@ -211,17 +280,17 @@ export default function MapComponent({ locations, selectedLocation, onLocationSe
             </div>
         )}
 
-        {userLocation && (
-            <button
-                onClick={handleRecenter}
-                className="absolute bottom-6 right-14 bg-white p-3 rounded-full shadow-md hover:bg-gray-50 text-gray-600 transition-colors"
-                title="Go to my location"
-            >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
-                    <path fillRule="evenodd" d="M11.54 22.351l.07.04.028.016a.76.76 0 00.723 0l.028-.015.071-.041a16.975 16.975 0 001.144-.742 19.58 19.58 0 002.683-2.282c1.944-1.99 3.963-4.98 3.963-8.827a8.25 8.25 0 00-16.5 0c0 3.846 2.02 6.837 3.963 8.827a19.58 19.58 0 002.682 2.282 16.975 16.975 0 001.145.742zM12 13.5a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
-                </svg>
-            </button>
-        )}
+           {userLocation && (
+               <button
+                   onClick={handleRecenter}
+                   className={`absolute right-14 bg-white p-3 rounded-full shadow-md hover:bg-gray-50 text-gray-600 transition-all duration-300 ${navigationInfo ? 'bottom-32' : 'bottom-6'}`}
+                   title="Go to my location"
+               >
+                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
+                       <path fillRule="evenodd" d="M11.54 22.351l.07.04.028.016a.76.76 0 00.723 0l.028-.015.071-.041a16.975 16.975 0 001.144-.742 19.58 19.58 0 002.683-2.282c1.944-1.99 3.963-4.98 3.963-8.827a8.25 8.25 0 00-16.5 0c0 3.846 2.02 6.837 3.963 8.827a19.58 19.58 0 002.682 2.282 16.975 16.975 0 001.145.742zM12 13.5a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+                   </svg>
+               </button>
+           )}
       </div>
     </APIProvider>
   )
@@ -451,6 +520,41 @@ function MapHandler({ onMapLoad }: { onMapLoad: (map: google.maps.Map | null) =>
     useEffect(() => {
         if (map) onMapLoad(map)
     }, [map, onMapLoad])
+    return null
+}
+
+function Directions({ directions }: { directions: google.maps.DirectionsResult | null }) {
+    const map = useMap()
+    const routesLibrary = useMapsLibrary('routes')
+    const [directionsService, setDirectionsService] = useState<google.maps.DirectionsService | null>(null)
+    const [directionsRenderer, setDirectionsRenderer] = useState<google.maps.DirectionsRenderer | null>(null)
+
+    useEffect(() => {
+        if (!routesLibrary || !map) return
+        const renderer = new routesLibrary.DirectionsRenderer({ 
+            map,
+            suppressMarkers: false, // Show A/B markers
+            preserveViewport: false // Let map fit bounds
+        })
+        setDirectionsService(new routesLibrary.DirectionsService())
+        setDirectionsRenderer(renderer)
+
+        return () => {
+            renderer.setMap(null) // Clean up renderer when component unmounts
+        }
+    }, [routesLibrary, map])
+
+    useEffect(() => {
+        if (!directionsRenderer) return
+        
+        if (directions) {
+            directionsRenderer.setMap(map) // Ensure map is attached
+            directionsRenderer.setDirections(directions)
+        } else {
+            directionsRenderer.setMap(null) // Clear directions from map
+        }
+    }, [directionsRenderer, directions, map])
+
     return null
 }
 
