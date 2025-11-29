@@ -284,10 +284,15 @@ export default function DashboardClient() {
       }
   }
 
-  const handleMapClick = (e: google.maps.MapMouseEvent) => {
+  const handleMapClick = (e: google.maps.MapMouseEvent | any) => {
       if (e.latLng) {
           const lat = e.latLng.lat()
           const lng = e.latLng.lng()
+          setSelectedPos({ lat, lng })
+          setValue('lat', lat)
+          setValue('lng', lng)
+      } else if (e.detail && e.detail.latLng) {
+          const { lat, lng } = e.detail.latLng
           setSelectedPos({ lat, lng })
           setValue('lat', lat)
           setValue('lng', lng)
