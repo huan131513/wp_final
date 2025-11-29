@@ -285,8 +285,9 @@ export default function DashboardClient() {
   }
 
   const handleMapClick = (e: google.maps.MapMouseEvent) => {
-      if (e.detail.latLng) {
-          const { lat, lng } = e.detail.latLng
+      if (e.latLng) {
+          const lat = e.latLng.lat()
+          const lng = e.latLng.lng()
           setSelectedPos({ lat, lng })
           setValue('lat', lat)
           setValue('lng', lng)
