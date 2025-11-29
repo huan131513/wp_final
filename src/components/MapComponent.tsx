@@ -828,7 +828,7 @@ function ReviewItem({ review, locationId, onUpdate, onRefresh }: {
                                             review={reply}
                                             locationId={locationId}
                                             onUpdate={(id, updater) => {
-                                                setLocalReplies(prev => prev.map((r: any) => 
+                                                setLocalReplies((prev: any[]) => prev.map((r: any) => 
                                                     r.id === id ? updater(r) : r
                                                 ))
                                             }}

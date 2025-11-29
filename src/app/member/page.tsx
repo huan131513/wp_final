@@ -65,29 +65,39 @@ export default function MemberDashboard() {
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false)
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false)
 
-  useEffect(() => {
-    const loadData = async () => {
-        setIsLoading(true)
-        try {
-            const [profileRes, savedRes, leaderRes] = await Promise.all([
-                fetch('/api/user/profile'),
-                fetch('/api/user/saved-locations'),
-                fetch('/api/leaderboard')
-            ])
-            
-            if (profileRes.ok) setProfile(await profileRes.json())
-            if (savedRes.ok) setSavedLocations(await savedRes.json())
-            if (leaderRes.ok) setLeaderboard(await leaderRes.json())
+    useEffect(() => {
+        const loadData = async () => {
+            setIsLoading(true)
+            try {
+                const [profileRes, savedRes, leaderRes] = await Promise.all([
+                    fetch('/api/user/profile'),
+                    fetch('/api/user/saved-locations'),
+                    fetch('/api/leaderboard')
+                ])
+                
+                if (profileRes.ok) {
+                    setProfile(await profileRes.json())
+                } else {
+                    if (profileRes.status === 401 || profileRes.status === 404) {
+                        // Session invalid or user not found, redirect to login
+                        window.location.href = '/login'
+                        return
+                    }
+                    toast.error('Failed to load profile')
+                }
 
-        } catch (error) {
-            console.error(error)
-            toast.error('Failed to load data')
-        } finally {
-            setIsLoading(false)
+                if (savedRes.ok) setSavedLocations(await savedRes.json())
+                if (leaderRes.ok) setLeaderboard(await leaderRes.json())
+
+            } catch (error) {
+                console.error(error)
+                toast.error('Failed to load data')
+            } finally {
+                setIsLoading(false)
+            }
         }
-    }
-    loadData()
-  }, [])
+        loadData()
+    }, [])
 
   const handleDeleteSaved = async (locationId: string) => {
       const res = await fetch(`/api/user/saved-locations?locationId=${locationId}`, {
