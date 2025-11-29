@@ -8,6 +8,7 @@ import { useSession, signOut } from 'next-auth/react'
 import RequestFacilityModal from '@/components/RequestFacilityModal'
 import { NotificationBell } from '@/components/NotificationBell'
 import { Heart } from 'lucide-react'
+import { useSearchParams } from 'next/navigation'
 
 export default function Home() {
   const { data: session } = useSession()
@@ -19,6 +20,20 @@ export default function Home() {
   const [isMobileExpanded, setIsMobileExpanded] = useState(false)
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false)
   const [savedLocationIds, setSavedLocationIds] = useState<Set<string>>(new Set())
+
+  const searchParams = useSearchParams()
+  const initialLocationId = searchParams.get('locationId')
+
+  useEffect(() => {
+    if (initialLocationId && locations.length > 0) {
+      const targetLoc = locations.find(l => l.id === initialLocationId)
+      if (targetLoc) {
+        setSelectedLocation(targetLoc)
+        // Optionally clear the param so it doesn't stick
+        // window.history.replaceState({}, '', '/')
+      }
+    }
+  }, [locations, initialLocationId])
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -180,7 +195,7 @@ export default function Home() {
             flex flex-col bg-white overflow-hidden
             md:w-80 md:relative md:h-auto md:rounded-xl md:shadow-sm md:border md:border-gray-200
             fixed bottom-0 left-0 right-0 z-30 rounded-t-2xl shadow-[0_-2px_10px_rgba(0,0,0,0.1)] transition-all duration-300 ease-in-out
-            ${isMobileExpanded ? 'h-[80vh]' : 'h-[25vh] md:h-auto'}
+            ${isMobileExpanded ? 'h-[80vh]' : 'h-[160px] md:h-auto'}
         `}>
           {/* Mobile Header with Handle */}
           <div
@@ -340,7 +355,7 @@ export default function Home() {
             )}
           </div>
         </div>
-      </main>
+    </main>
 
       {isRequestModalOpen && (
         <RequestFacilityModal onClose={() => setIsRequestModalOpen(false)} />

@@ -36,6 +36,16 @@ export function MapComponent({
     const reportInputRef = useRef<HTMLTextAreaElement>(null)
     const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null)
     const [navigationInfo, setNavigationInfo] = useState<{ duration: string, distance: string } | null>(null)
+    const [infoWindowWidth, setInfoWindowWidth] = useState(350)
+
+  useEffect(() => {
+        const handleResize = () => {
+            setInfoWindowWidth(Math.min(350, window.innerWidth - 40))
+        }
+        handleResize()
+        window.addEventListener('resize', handleResize)
+        return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
     const handleNavigate = () => {
         if (!userLocation || !selectedLocation) {
@@ -142,17 +152,234 @@ export function MapComponent({
         }
     }
 
-    return (
-        <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''}>
+    const mapStyles = [
+        {
+            "elementType": "geometry",
+            "stylers": [
+                {
+                    "color": "#ebe3cd"
+                }
+            ]
+        },
+        {
+            "elementType": "labels.text.fill",
+            "stylers": [
+                {
+                    "color": "#523735"
+                }
+            ]
+        },
+        {
+            "elementType": "labels.text.stroke",
+            "stylers": [
+                {
+                    "color": "#f5f1e6"
+                }
+            ]
+        },
+        {
+            "featureType": "administrative",
+            "elementType": "geometry.stroke",
+            "stylers": [
+                {
+                    "color": "#c9b2a6"
+                }
+            ]
+        },
+        {
+            "featureType": "administrative.land_parcel",
+            "elementType": "geometry.stroke",
+            "stylers": [
+                {
+                    "color": "#dcd2be"
+                }
+            ]
+        },
+        {
+            "featureType": "administrative.land_parcel",
+            "elementType": "labels.text.fill",
+            "stylers": [
+                {
+                    "color": "#ae9e90"
+                }
+            ]
+        },
+        {
+            "featureType": "landscape.natural",
+            "elementType": "geometry",
+            "stylers": [
+                {
+                    "color": "#dfd2ae"
+                }
+            ]
+        },
+        {
+            "featureType": "poi",
+            "elementType": "geometry",
+            "stylers": [
+                {
+                    "color": "#dfd2ae"
+                }
+            ]
+        },
+        {
+            "featureType": "poi",
+            "elementType": "labels.text.fill",
+            "stylers": [
+                {
+                    "color": "#93817c"
+                }
+            ]
+        },
+        {
+            "featureType": "poi.park",
+            "elementType": "geometry.fill",
+            "stylers": [
+                {
+                    "color": "#a5b076"
+                }
+            ]
+        },
+        {
+            "featureType": "poi.park",
+            "elementType": "labels.text.fill",
+            "stylers": [
+                {
+                    "color": "#447530"
+                }
+            ]
+        },
+        {
+            "featureType": "road",
+            "elementType": "geometry",
+            "stylers": [
+                {
+                    "color": "#f5f1e6"
+                }
+            ]
+        },
+        {
+            "featureType": "road.arterial",
+            "elementType": "geometry",
+            "stylers": [
+                {
+                    "color": "#fdfcf8"
+                }
+            ]
+        },
+        {
+            "featureType": "road.highway",
+            "elementType": "geometry",
+            "stylers": [
+                {
+                    "color": "#f8c967"
+                }
+            ]
+        },
+        {
+            "featureType": "road.highway",
+            "elementType": "geometry.stroke",
+            "stylers": [
+                {
+                    "color": "#e9bc62"
+                }
+            ]
+        },
+        {
+            "featureType": "road.highway.controlled_access",
+            "elementType": "geometry",
+            "stylers": [
+                {
+                    "color": "#e98d58"
+                }
+            ]
+        },
+        {
+            "featureType": "road.highway.controlled_access",
+            "elementType": "geometry.stroke",
+            "stylers": [
+                {
+                    "color": "#db8555"
+                }
+            ]
+        },
+        {
+            "featureType": "road.local",
+            "elementType": "labels.text.fill",
+            "stylers": [
+                {
+                    "color": "#806b63"
+                }
+            ]
+        },
+        {
+            "featureType": "transit.line",
+            "elementType": "geometry",
+            "stylers": [
+                {
+                    "color": "#dfd2ae"
+                }
+            ]
+        },
+        {
+            "featureType": "transit.line",
+            "elementType": "labels.text.fill",
+            "stylers": [
+                {
+                    "color": "#8f7d77"
+                }
+            ]
+        },
+        {
+            "featureType": "transit.line",
+            "elementType": "labels.text.stroke",
+            "stylers": [
+                {
+                    "color": "#ebe3cd"
+                }
+            ]
+        },
+        {
+            "featureType": "transit.station",
+            "elementType": "geometry",
+            "stylers": [
+                {
+                    "color": "#dfd2ae"
+                }
+            ]
+        },
+        {
+            "featureType": "water",
+            "elementType": "geometry.fill",
+            "stylers": [
+                {
+                    "color": "#b9d3c2"
+                }
+            ]
+        },
+        {
+            "featureType": "water",
+            "elementType": "labels.text.fill",
+            "stylers": [
+                {
+                    "color": "#92998d"
+                }
+            ]
+        }
+    ]
+
+  return (
+    <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''}>
             <div className="h-full w-full rounded-xl overflow-hidden border border-gray-200 shadow-inner relative">
-                <Map
-                    defaultCenter={NTU_CENTER}
-                    defaultZoom={16}
-                    mapId={process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID || 'DEMO_MAP_ID'}
-                    gestureHandling={'greedy'}
-                    disableDefaultUI={false}
+        <Map
+          defaultCenter={NTU_CENTER}
+          defaultZoom={16}
+          mapId={process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID || 'DEMO_MAP_ID'}
+          gestureHandling={'greedy'}
+          disableDefaultUI={false}
                     mapTypeId={'roadmap'}
                     mapTypeControl={false}
+                    styles={mapStyles}
                 >
                     <MapHandler onMapLoad={setMap} />
                     <Directions directions={directions} />
@@ -184,23 +411,23 @@ export function MapComponent({
                         </AdvancedMarker>
                     )}
 
-                    {locations.map(loc => (
-                        <AdvancedMarker
-                            key={loc.id}
-                            position={{ lat: loc.lat, lng: loc.lng }}
+           {locations.map(loc => (
+             <AdvancedMarker
+               key={loc.id}
+               position={{ lat: loc.lat, lng: loc.lng }}
                             onClick={() => onLocationSelect(loc)}
-                        >
+             >
                             {getMarkerContent(loc.type)}
-                        </AdvancedMarker>
-                    ))}
+             </AdvancedMarker>
+           ))}
 
                     {selectedLocation && (
                         <InfoWindow
                             position={{ lat: selectedLocation.lat, lng: selectedLocation.lng }}
                             onCloseClick={() => onLocationSelect(null)}
-                            maxWidth={350}
+                            maxWidth={infoWindowWidth}
                         >
-                            <div className="p-2 min-w-[300px] max-h-[400px] overflow-y-auto pr-4">
+                            <div className="p-2 min-w-[250px] max-h-[400px] overflow-y-auto pr-4">
                                 <div className="flex items-center gap-2 mb-3">
                                     <div className="text-2xl">
                                         {selectedLocation.type === 'TOILET' && '🚽'}
@@ -240,15 +467,15 @@ export function MapComponent({
                                             {formatLocationType(selectedLocation.type)}
                                         </div>
                                     </div>
-                                </div>
+                 </div>
 
                                 <div className="space-y-2 border-t border-b py-3 mb-4">
-                                    {selectedLocation.floor && (
+                 {selectedLocation.floor && (
                                         <div className="flex justify-between text-sm">
                                             <span className="text-gray-500">樓層</span>
                                             <span className="font-medium text-gray-900">{selectedLocation.floor}</span>
-                                        </div>
-                                    )}
+                    </div>
+                 )}
 
                                     {selectedLocation.type === 'TOILET' && (
                                         <>
@@ -275,9 +502,9 @@ export function MapComponent({
                                     )}
                                 </div>
 
-                                {selectedLocation.description && (
+                 {selectedLocation.description && (
                                     <div className="mb-4 text-sm text-gray-600 bg-gray-50 p-2 rounded">
-                                        {selectedLocation.description}
+                        {selectedLocation.description}
                                     </div>
                                 )}
 
@@ -287,10 +514,10 @@ export function MapComponent({
                                     reviews={selectedLocation.reviews || []}
                                     onReviewAdded={onReviewAdded}
                                 />
-                            </div>
-                        </InfoWindow>
-                    )}
-                </Map>
+               </div>
+             </InfoWindow>
+           )}
+        </Map>
 
                 {/* Report Modal */}
                 {isReportModalOpen && (
@@ -344,9 +571,9 @@ export function MapComponent({
                         </svg>
                     </button>
                 )}
-            </div>
-        </APIProvider>
-    )
+      </div>
+    </APIProvider>
+  )
 }
 
 function FacilityItem({ label, has }: { label: string, has: boolean }) {
