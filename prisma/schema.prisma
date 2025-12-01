@@ -23,6 +23,7 @@ model User {
   savedLocations SavedLocation[] // 新增：收藏關聯
   notifications  Notification[]  // 新增：通知關聯
   checkIns       CheckIn[]       // 新增：打卡關聯
+  gameScores     GameScore[]     // 新增：遊戲分數關聯
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -213,4 +214,23 @@ model CheckIn {
   locationId String
   location  Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+}
+
+// 遊戲相關模型
+
+enum GameType {
+  MINESWEEPER
+  GAME_2048
+  SUDOKU
+}
+
+model GameScore {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  gameType  GameType
+  score     Int      // 分數或花費時間（單位：秒或分，視遊戲而定）
+  playedAt  DateTime @default(now())
+
+  @@index([gameType, score]) // 加快排行榜查詢
 }
