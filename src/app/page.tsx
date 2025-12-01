@@ -161,6 +161,9 @@ function HomeContent() {
                     會員中心
                   </Link>
                 )}
+                <Link href="/playground" className="text-sm font-medium text-purple-600 hover:text-purple-800 flex items-center gap-1">
+                  <span>🎮</span> <span className="hidden md:inline">遊樂場</span>
+                </Link>
                 <button
                   onClick={() => signOut()}
                   className="text-sm font-medium text-gray-600 hover:text-red-600 transition-colors px-3 py-2 rounded-md hover:bg-gray-100"
