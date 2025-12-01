@@ -163,13 +163,13 @@ export default function MemberDashboard() {
                     <div className="flex gap-2 mt-3">
                         <button 
                             onClick={() => setIsEditProfileOpen(true)}
-                            className="text-xs flex items-center gap-1 bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-full transition-colors"
+                            className="text-xs flex items-center gap-1 text-black bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-full transition-colors"
                         >
                             <Edit size={12} /> 編輯資料
                         </button>
                         <button 
                             onClick={() => setIsChangePasswordOpen(true)}
-                            className="text-xs flex items-center gap-1 bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-full transition-colors"
+                            className="text-xs flex items-center text-black gap-1 bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-full transition-colors"
                         >
                             <Key size={12} /> 修改密碼
                         </button>
