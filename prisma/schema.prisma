@@ -222,6 +222,7 @@ enum GameType {
   MINESWEEPER
   GAME_2048
   SUDOKU
+  WATER_SORT
 }
 
 model GameScore {
@@ -230,7 +231,9 @@ model GameScore {
   user      User     @relation(fields: [userId], references: [id])
   gameType  GameType
   score     Int      // 分數或花費時間（單位：秒或分，視遊戲而定）
+  level     Int?     // 關卡等級（用於 Water Sort 等有等級的遊戲）
   playedAt  DateTime @default(now())
 
   @@index([gameType, score]) // 加快排行榜查詢
+  @@index([gameType, level, score]) // 加快按關卡查詢排行榜
 }

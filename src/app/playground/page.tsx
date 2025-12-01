@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
-import { Gamepad2, Bomb, Grid3x3 } from 'lucide-react'
+import { Gamepad2, Bomb, Grid3x3, FlaskConical } from 'lucide-react'
 
 export default function PlaygroundPage() {
   const { data: session } = useSession()
@@ -50,6 +50,22 @@ export default function PlaygroundPage() {
                     </p>
                     <div className="flex items-center gap-2 text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded w-fit">
                         <span>積分挑戰</span>
+                    </div>
+                </div>
+            </Link>
+
+            {/* Water Sort Card */}
+            <Link href="/playground/water-sort" className="block group">
+                <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 h-full transition-all duration-300 hover:shadow-md hover:border-cyan-200 hover:-translate-y-1">
+                    <div className="w-12 h-12 bg-cyan-100 rounded-xl flex items-center justify-center mb-4 group-hover:bg-cyan-200 transition-colors">
+                        <FlaskConical className="text-cyan-600" size={24} />
+                    </div>
+                    <h2 className="text-xl font-bold text-gray-900 mb-2">顏色排序</h2>
+                    <p className="text-gray-500 text-sm mb-4">
+                        將同色液體倒入同一試管中，考驗你的邏輯思維！
+                    </p>
+                    <div className="flex items-center gap-2 text-xs font-medium text-cyan-600 bg-cyan-50 px-2 py-1 rounded w-fit">
+                        <span>最少步數</span>
                     </div>
                 </div>
             </Link>

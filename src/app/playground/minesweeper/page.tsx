@@ -32,8 +32,42 @@ export default function MinesweeperPage() {
   const [timer, setTimer] = useState(0) // Timer in seconds with 2 decimal precision
   const [leaderboard, setLeaderboard] = useState<any[]>([])
   const [highlightedNeighbors, setHighlightedNeighbors] = useState<string[]>([])
+  const [isMobile, setIsMobile] = useState(false)
   
   const timerRef = useRef<NodeJS.Timeout | null>(null)
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const touchStartPosRef = useRef<{ r: number, c: number } | null>(null)
+  const isLongPressRef = useRef(false)
+
+  // Wrapper for setDifficulty that enforces EASY on mobile
+  const handleSetDifficulty = useCallback((newDifficulty: Difficulty) => {
+    if (isMobile) {
+      // Force EASY on mobile, ignore other difficulties
+      setDifficulty('EASY')
+    } else {
+      setDifficulty(newDifficulty)
+    }
+  }, [isMobile])
+
+  // Detect mobile device
+  useEffect(() => {
+    const checkMobile = () => {
+      // Check if screen width is less than 768px (md breakpoint)
+      const isMobileDevice = window.innerWidth < 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+      setIsMobile(isMobileDevice)
+    }
+    
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  // Force EASY difficulty on mobile
+  useEffect(() => {
+    if (isMobile && difficulty !== 'EASY') {
+      setDifficulty('EASY')
+    }
+  }, [isMobile, difficulty])
 
   // Initialize Board
   const initBoard = useCallback(() => {
@@ -99,6 +133,7 @@ export default function MinesweeperPage() {
     initBoard()
     return () => {
       if (timerRef.current) clearInterval(timerRef.current)
+      if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current)
     }
   }, [initBoard])
 
@@ -112,11 +147,22 @@ export default function MinesweeperPage() {
     }
   }, [gameState])
 
+  // Map difficulty to level number
+  const getDifficultyLevel = (diff: Difficulty): number => {
+    switch (diff) {
+      case 'EASY': return 1
+      case 'MEDIUM': return 2
+      case 'HARD': return 3
+      default: return 1
+    }
+  }
+
   // Fetch Leaderboard
   useEffect(() => {
     const fetchLeaderboard = async () => {
       try {
-        const res = await fetch('/api/games/score?gameType=MINESWEEPER')
+        const level = getDifficultyLevel(difficulty)
+        const res = await fetch(`/api/games/score?gameType=MINESWEEPER&level=${level}`)
         if (res.ok) {
           const data = await res.json()
           setLeaderboard(data)
@@ -126,7 +172,7 @@ export default function MinesweeperPage() {
       }
     }
     fetchLeaderboard()
-  }, [gameState]) // Refresh when game ends
+  }, [gameState, difficulty]) // Refresh when game ends or difficulty changes
 
   const getNeighbors = (r: number, c: number, rows: number, cols: number) => {
     const neighbors = []
@@ -248,6 +294,137 @@ export default function MinesweeperPage() {
     setMinesLeft(prev => cell.isFlagged ? prev - 1 : prev + 1)
   }
 
+  // Touch handlers for mobile long press to flag
+  const handleTouchStart = (e: React.TouchEvent, r: number, c: number) => {
+    if (gameState === 'WON' || gameState === 'LOST') return
+    
+    const cell = board[r][c]
+    if (cell.isRevealed) return // Can't flag revealed cells
+    
+    touchStartPosRef.current = { r, c }
+    isLongPressRef.current = false
+    
+    // Prevent default to avoid scrolling/zooming
+    e.preventDefault()
+    
+    // Start long press timer (1 second = 1000ms)
+    longPressTimerRef.current = setTimeout(() => {
+      isLongPressRef.current = true
+      // Trigger flag action
+      if (gameState === 'IDLE') setGameState('PLAYING')
+      
+      const newBoard = [...board]
+      const targetCell = newBoard[r][c]
+      
+      targetCell.isFlagged = !targetCell.isFlagged
+      setBoard(newBoard)
+      setMinesLeft(prev => targetCell.isFlagged ? prev - 1 : prev + 1)
+      
+      // Provide haptic feedback if available
+      if (navigator.vibrate) {
+        navigator.vibrate(50)
+      }
+    }, 500)
+  }
+
+  const handleTouchEnd = (e: React.TouchEvent, r: number, c: number) => {
+    // Clear long press timer
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current)
+      longPressTimerRef.current = null
+    }
+    
+    // If it was a long press, prevent the normal click action
+    if (isLongPressRef.current) {
+      isLongPressRef.current = false
+      touchStartPosRef.current = null
+      e.preventDefault()
+      e.stopPropagation()
+      return
+    }
+    
+    // Check if touch ended on the same cell (and wasn't a long press)
+    if (touchStartPosRef.current && touchStartPosRef.current.r === r && touchStartPosRef.current.c === c) {
+      // Normal tap - trigger normal click action
+      if (gameState === 'WON' || gameState === 'LOST') {
+        touchStartPosRef.current = null
+        return
+      }
+      
+      const cell = board[r][c]
+      
+      // Handle chord action (same as mouse)
+      if (cell.isRevealed && cell.neighborMines > 0) {
+        const { rows, cols } = CONFIG[difficulty]
+        const neighbors = getNeighbors(r, c, rows, cols)
+        const flagCount = neighbors.reduce((acc, {r, c}) => acc + (board[r][c].isFlagged ? 1 : 0), 0)
+        
+        if (flagCount === cell.neighborMines) {
+          const newBoard = [...board]
+          let hitMine = false
+          
+          neighbors.forEach(({r, c}) => {
+            const target = newBoard[r][c]
+            if (!target.isRevealed && !target.isFlagged) {
+              if (target.isMine) {
+                hitMine = true
+                target.isRevealed = true
+              } else {
+                revealCell(newBoard, r, c)
+              }
+            }
+          })
+          
+          setBoard(newBoard)
+          
+          if (hitMine) {
+            revealAllMines(newBoard)
+            setGameState('LOST')
+            toast.error('💩 踩到便便了！')
+          } else {
+            checkWin(newBoard)
+          }
+        }
+        touchStartPosRef.current = null
+        return
+      }
+      
+      // Normal click action
+      if (cell.isFlagged || cell.isRevealed) {
+        touchStartPosRef.current = null
+        return
+      }
+      
+      if (gameState === 'IDLE') setGameState('PLAYING')
+      
+      const newBoard = [...board]
+      const target = newBoard[r][c]
+      
+      if (target.isMine) {
+        revealAllMines(newBoard)
+        setBoard(newBoard)
+        setGameState('LOST')
+        toast.error('💩 踩到便便了！')
+      } else {
+        revealCell(newBoard, r, c)
+        setBoard(newBoard)
+        checkWin(newBoard)
+      }
+    }
+    
+    touchStartPosRef.current = null
+  }
+
+  const handleTouchCancel = () => {
+    // Clear long press timer on touch cancel
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current)
+      longPressTimerRef.current = null
+    }
+    isLongPressRef.current = false
+    touchStartPosRef.current = null
+  }
+
   const revealCell = (board: Cell[][], r: number, c: number) => {
     if (r < 0 || r >= board.length || c < 0 || c >= board[0].length || board[r][c].isRevealed || board[r][c].isFlagged) return
 
@@ -286,17 +463,38 @@ export default function MinesweeperPage() {
       // Submit Score
       if (session) {
         try {
-          await fetch('/api/games/score', {
+          const level = getDifficultyLevel(difficulty)
+          const scoreData = {
+            gameType: 'MINESWEEPER',
+            score: Math.round(timer * 100), // Convert to centiseconds for storage
+            level: level
+          }
+          console.log('Submitting score with level:', scoreData) // Debug log
+          
+          const response = await fetch('/api/games/score', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              gameType: 'MINESWEEPER',
-              score: Math.round(timer * 100) // Convert to centiseconds for storage
-            })
+            body: JSON.stringify(scoreData)
           })
+          
+          if (!response.ok) {
+            const errorData = await response.json()
+            console.error('Score submission error:', errorData)
+            throw new Error('Failed to submit score')
+          }
+          
+          const result = await response.json()
+          console.log('Score submitted successfully:', result) // Debug log
           toast.success('分數已上傳！')
+          
+          // Refresh leaderboard after submitting score
+          const res = await fetch(`/api/games/score?gameType=MINESWEEPER&level=${level}`)
+          if (res.ok) {
+            const data = await res.json()
+            setLeaderboard(data)
+          }
         } catch (err) {
-          console.error(err)
+          console.error('Score submission error:', err)
           toast.error('分數上傳失敗')
         }
       }
@@ -340,23 +538,34 @@ export default function MinesweeperPage() {
         </header>
 
         <div className="flex flex-col items-center">
-            <div className="flex gap-2 mb-4 bg-white p-1.5 rounded-lg shadow-sm border border-gray-200">
-                {(['EASY', 'MEDIUM', 'HARD'] as Difficulty[]).map(d => (
-                    <button
-                        key={d}
-                        onClick={() => setDifficulty(d)}
-                        className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
-                            difficulty === d 
-                            ? 'bg-blue-600 text-white shadow-sm' 
-                            : 'bg-transparent text-gray-500 hover:bg-gray-100'
-                        }`}
-                    >
-                        {d === 'EASY' ? '簡單' : d === 'MEDIUM' ? '中等' : '困難'}
-                    </button>
-                ))}
-            </div>
+            {/* Difficulty Selector - Only show EASY on mobile */}
+            {!isMobile ? (
+                <div className="flex gap-2 mb-4 bg-white p-1.5 rounded-lg shadow-sm border border-gray-200">
+                    {(['EASY', 'MEDIUM', 'HARD'] as Difficulty[]).map(d => (
+                        <button
+                            key={d}
+                            onClick={() => handleSetDifficulty(d)}
+                            className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
+                                difficulty === d 
+                                ? 'bg-blue-600 text-white shadow-sm' 
+                                : 'bg-transparent text-gray-500 hover:bg-gray-100'
+                            }`}
+                        >
+                            {d === 'EASY' ? '簡單' : d === 'MEDIUM' ? '中等' : '困難'}
+                        </button>
+                    ))}
+                </div>
+            ) : (
+                <div className="mb-4 text-sm text-gray-600 text-center">
+                    難度：簡單（手機模式）
+                </div>
+            )}
 
-            <div className="bg-[#c0c0c0] p-2 shadow-xl border-t-4 border-l-4 border-[#ffffff] border-b-4 border-r-4 border-[#808080] w-fit select-none" onMouseLeave={handleMouseLeave}>
+            <div 
+                className="bg-[#c0c0c0] p-2 shadow-xl border-t-4 border-l-4 border-[#ffffff] border-b-4 border-r-4 border-[#808080] w-fit select-none" 
+                onMouseLeave={handleMouseLeave}
+                onContextMenu={(e) => e.preventDefault()}
+            >
                 <div className="flex justify-between items-center mb-2 bg-[#c0c0c0] px-2 py-1 border-t-2 border-l-2 border-[#808080] border-b-2 border-r-2 border-[#ffffff]">
                     {/* Mine Counter */}
                     <div className="font-mono text-3xl bg-black text-[#ff0000] px-2 border-t-1 border-l-1 border-[#808080] border-b-1 border-r-1 border-[#ffffff] min-w-[70px] text-center tracking-wider font-bold" style={{ fontFamily: 'Consolas, monospace' }}>
@@ -384,6 +593,7 @@ export default function MinesweeperPage() {
                         gap: '1px',
                         backgroundColor: '#808080'
                     }}
+                    onContextMenu={(e) => e.preventDefault()}
                 >
                     {board.map((row, r) => (
                         row.map((cell, c) => {
@@ -396,8 +606,11 @@ export default function MinesweeperPage() {
                                     onMouseDown={(e) => handleMouseDown(e, r, c)}
                                     onMouseUp={(e) => handleMouseUp(e, r, c)}
                                     onContextMenu={(e) => handleRightClick(e, r, c)}
+                                    onTouchStart={(e) => handleTouchStart(e, r, c)}
+                                    onTouchEnd={(e) => handleTouchEnd(e, r, c)}
+                                    onTouchCancel={handleTouchCancel}
                                     className={`
-                                        flex items-center justify-center cursor-pointer leading-none
+                                        flex items-center justify-center cursor-pointer leading-none touch-none
                                         ${showPressedStyle
                                             ? cell.isMine && cell.isRevealed
                                                 ? 'bg-[#ff0000]'
@@ -410,7 +623,10 @@ export default function MinesweeperPage() {
                                         height: '30px', 
                                         fontSize: '18px', 
                                         fontWeight: 900, 
-                                        fontFamily: 'Arial Black, sans-serif' 
+                                        fontFamily: 'Arial Black, sans-serif',
+                                        userSelect: 'none',
+                                        WebkitUserSelect: 'none',
+                                        WebkitTouchCallout: 'none'
                                     }}
                                 >
                                     {cell.isRevealed ? (
@@ -438,7 +654,7 @@ export default function MinesweeperPage() {
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 sticky top-8">
             <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                 <Trophy className="text-yellow-500" />
-                排行榜
+                排行榜 - {difficulty === 'EASY' ? '簡單' : difficulty === 'MEDIUM' ? '中等' : '困難'}
             </h2>
             <div className="space-y-3">
                 {leaderboard.length === 0 ? (
