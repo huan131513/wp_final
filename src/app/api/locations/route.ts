@@ -84,6 +84,19 @@ export async function GET() {
               }
             } : false
           }
+        },
+        checkIns: {
+          take: 5,
+          orderBy: { createdAt: 'desc' },
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                avatar: true
+              }
+            }
+          }
         }
       }
     })

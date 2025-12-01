@@ -132,7 +132,7 @@ export function MapComponent({
             } as React.CSSProperties
         }))
         setPoops(newPoops)
-        setTimeout(() => setPoops([]), 1000)
+        setTimeout(() => setPoops([]), 3000)
     }
 
     const handleCheckIn = async () => {
@@ -407,14 +407,14 @@ export function MapComponent({
         }
     ]
 
-    return (
+  return (
         <>
             {/* Poop Explosion Overlay */}
             {poops.map(p => (
                 <div key={p.id} className="poop-particle" style={p.style}>💩</div>
             ))}
 
-            <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''}>
+    <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''}>
                 <div className="h-full w-full rounded-xl overflow-hidden border border-gray-200 shadow-inner relative">
         <Map
           defaultCenter={NTU_CENTER}
@@ -556,7 +556,36 @@ export function MapComponent({
                                     )}
                                 </div>
 
-                 {selectedLocation.description && (
+                                {selectedLocation.checkIns && selectedLocation.checkIns.length > 0 && (
+                                    <div className="mb-4">
+                                        <h4 className="text-xs font-bold text-gray-500 mb-2">最近打卡</h4>
+                                        <div className="flex -space-x-2 overflow-hidden py-1 pl-1">
+                                            {selectedLocation.checkIns.map((checkIn) => (
+                                                <Link 
+                                                    key={checkIn.id}
+                                                    href={`/user/${checkIn.user?.name}`}
+                                                    className="inline-block relative w-8 h-8 rounded-full ring-2 ring-white hover:z-10 hover:scale-110 transition-transform duration-200"
+                                                    title={`${checkIn.user?.name} - ${new Date(checkIn.createdAt).toLocaleString()}`}
+                                                >
+                                                    {checkIn.user?.avatar && checkIn.user.avatar.startsWith('data:image') ? (
+                                                        // eslint-disable-next-line @next/next/no-img-element
+                                                        <img 
+                                                            src={checkIn.user.avatar} 
+                                                            alt={checkIn.user.name} 
+                                                            className="w-full h-full rounded-full object-cover bg-gray-200" 
+                                                        />
+                                                    ) : (
+                                                        <div className="w-full h-full rounded-full bg-gray-200 flex items-center justify-center text-xs">
+                                                            {checkIn.user?.avatar || checkIn.user?.name?.charAt(0).toUpperCase()}
+                                                        </div>
+                                                    )}
+                                                </Link>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {selectedLocation.description && (
                                     <div className="mb-4 text-sm text-gray-600 bg-gray-50 p-2 rounded">
                         {selectedLocation.description}
                                     </div>
