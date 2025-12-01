@@ -38,6 +38,19 @@ export async function GET(
             include: {
                 achievement: true
             }
+        },
+        checkIns: {
+            orderBy: { createdAt: 'desc' },
+            select: {
+                id: true,
+                createdAt: true,
+                location: {
+                    select: {
+                        name: true,
+                        type: true
+                    }
+                }
+            }
         }
       }
     })
@@ -78,7 +91,8 @@ export async function GET(
         avatar: user.avatar,
         joinedAt: user.createdAt,
         stats: user._count,
-        achievements: processedAchievements
+        achievements: processedAchievements,
+        checkIns: user.checkIns
     }
 
     return NextResponse.json(publicProfile)

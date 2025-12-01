@@ -646,7 +646,7 @@ export function MapComponent({
                 {userLocation && (
                     <button
                         onClick={handleRecenter}
-                        className={`absolute right-14 bg-white p-3 rounded-full shadow-md hover:bg-gray-50 text-gray-600 transition-all duration-300 ${navigationInfo ? 'bottom-32' : 'bottom-6'}`}
+                        className={`absolute right-4 md:right-14 bg-white p-3 rounded-full shadow-md hover:bg-gray-50 text-gray-600 transition-all duration-300 z-20 ${navigationInfo ? 'bottom-48 md:bottom-32' : 'bottom-48 md:bottom-6'}`}
                         title="Go to my location"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
