@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, Suspense } from 'react'
 import { MapComponent } from '@/components/MapComponent'
 import { Location, LocationType } from '@/types/location'
 import Link from 'next/link'
@@ -10,7 +10,7 @@ import { NotificationBell } from '@/components/NotificationBell'
 import { Heart } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
 
-export default function Home() {
+function HomeContent() {
   const { data: session } = useSession()
   const [locations, setLocations] = useState<Location[]>([])
   const [selectedType, setSelectedType] = useState<LocationType | 'ALL' | 'SAVED'>('ALL')
@@ -361,6 +361,14 @@ export default function Home() {
         <RequestFacilityModal onClose={() => setIsRequestModalOpen(false)} />
       )}
     </div>
+  )
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<div className="flex h-screen items-center justify-center">Loading...</div>}>
+      <HomeContent />
+    </Suspense>
   )
 }
 
