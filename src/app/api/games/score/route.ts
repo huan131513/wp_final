@@ -6,8 +6,9 @@ import { z } from 'zod'
 
 // Validation schema for submitting scores
 const scoreSchema = z.object({
-  gameType: z.enum(['MINESWEEPER', 'GAME_2048', 'SUDOKU']),
+  gameType: z.enum(['MINESWEEPER', 'GAME_2048', 'SUDOKU', 'WATER_SORT']),
   score: z.number().int(),
+  level: z.number().int().optional(), // Optional level for games with levels
 })
 
 export async function POST(request: Request) {
@@ -25,6 +26,7 @@ export async function POST(request: Request) {
         userId: session.user.id,
         gameType: validatedData.gameType,
         score: validatedData.score,
+        level: validatedData.level,
       },
     })
 
@@ -41,22 +43,34 @@ export async function POST(request: Request) {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const gameType = searchParams.get('gameType')
+  const levelParam = searchParams.get('level')
 
-  if (!gameType || !['MINESWEEPER', 'GAME_2048', 'SUDOKU'].includes(gameType)) {
+  if (!gameType || !['MINESWEEPER', 'GAME_2048', 'SUDOKU', 'WATER_SORT'].includes(gameType)) {
     return NextResponse.json({ error: 'Invalid or missing gameType' }, { status: 400 })
   }
 
   try {
     // Determine sort order based on game type
-    // Minesweeper: lower score (time) is better
+    // Minesweeper & Water Sort: lower score (moves/time) is better
     // 2048: higher score is better
-    const isMinesweeper = gameType === 'MINESWEEPER'
+    const isLowerBetter = gameType === 'MINESWEEPER' || gameType === 'WATER_SORT'
+    
+    // Parse level if provided
+    const level = levelParam ? parseInt(levelParam, 10) : null
 
-    // Fetch all scores for this game type
+    // Build where clause
+    const where: any = {
+      gameType: gameType as any
+    }
+    
+    // If level is specified, filter by level
+    if (level !== null) {
+      where.level = level
+    }
+
+    // Fetch all scores for this game type (and level if specified)
     const allScores = await prisma.gameScore.findMany({
-      where: {
-        gameType: gameType as any
-      },
+      where,
       include: {
         user: {
           select: {
@@ -72,6 +86,7 @@ export async function GET(request: Request) {
     })
 
     // Group by user and keep only the best score for each user
+    // If level is specified, all scores are already filtered to that level
     const userBestScores = new Map<string, typeof allScores[0]>()
     
     for (const score of allScores) {
@@ -81,8 +96,8 @@ export async function GET(request: Request) {
       if (!existing) {
         userBestScores.set(userId, score)
       } else {
-        // Compare scores: for Minesweeper, lower is better; for others, higher is better
-        const isBetter = isMinesweeper 
+        // Compare scores: for Minesweeper/Water Sort, lower is better; for others, higher is better
+        const isBetter = isLowerBetter 
           ? score.score < existing.score 
           : score.score > existing.score
         
@@ -95,8 +110,8 @@ export async function GET(request: Request) {
     // Convert map to array and sort
     const leaderboard = Array.from(userBestScores.values())
       .sort((a, b) => {
-        return isMinesweeper 
-          ? a.score - b.score  // Ascending for Minesweeper
+        return isLowerBetter 
+          ? a.score - b.score  // Ascending for Minesweeper/Water Sort
           : b.score - a.score  // Descending for others
       })
       .slice(0, 10) // Take top 10

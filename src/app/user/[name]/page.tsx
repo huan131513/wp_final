@@ -174,15 +174,17 @@ export default function PublicProfilePage() {
                                     <h3 className={`font-bold text-sm ${ach.isUnlocked ? 'text-gray-900' : 'text-gray-500'}`}>{ach.name}</h3>
                                     <p className="text-[10px] text-gray-500 mt-1 h-8 flex items-center justify-center">{ach.description}</p>
                                 </div>
-                                <div className="mt-2 w-full bg-gray-200 rounded-full h-1 overflow-hidden">
+                                <div className="mt-2 w-full">
                                     <div className="flex justify-between text-[10px] text-gray-400 mb-1">
                                         <span>進度</span>
                                         <span>{ach.currentVal} / {ach.threshold}</span>
                                     </div>
-                                    <div 
-                                        className={`h-full rounded-full transition-all duration-500 ${ach.isUnlocked ? 'bg-yellow-400' : 'bg-gray-400'}`}
-                                        style={{ width: `${ach.progress}%` }}
-                                    />
+                                    <div className="w-full bg-gray-200 rounded-full h-1 overflow-hidden">
+                                        <div 
+                                            className={`h-full rounded-full transition-all duration-500 ${ach.isUnlocked ? 'bg-yellow-400' : 'bg-gray-400'}`}
+                                            style={{ width: `${ach.progress}%` }}
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         ))}
