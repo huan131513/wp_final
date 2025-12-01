@@ -3,7 +3,7 @@
 import { useSession } from 'next-auth/react'
 import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
-import { Edit, Key, Heart, Trash2, Crown, Upload, Camera } from 'lucide-react'
+import { Edit, Key, Heart, Trash2, Crown, Upload, Camera, ChevronLeft, ChevronRight } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { NotificationBell } from '@/components/NotificationBell'
 
@@ -54,11 +54,21 @@ interface LeaderboardUser {
     }
 }
 
+interface CheckIn {
+    id: string
+    location: {
+        name: string
+        type: string
+    }
+    createdAt: string
+}
+
 export default function MemberDashboard() {
   useSession()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [savedLocations, setSavedLocations] = useState<SavedLocation[]>([])
   const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([])
+  const [checkIns, setCheckIns] = useState<CheckIn[]>([])
   const [isLoading, setIsLoading] = useState(true)
   
   // Modal States
@@ -69,10 +79,11 @@ export default function MemberDashboard() {
         const loadData = async () => {
             setIsLoading(true)
             try {
-                const [profileRes, savedRes, leaderRes] = await Promise.all([
+                const [profileRes, savedRes, leaderRes, checkInRes] = await Promise.all([
                     fetch('/api/user/profile'),
                     fetch('/api/user/saved-locations'),
-                    fetch('/api/leaderboard')
+                    fetch('/api/leaderboard'),
+                    fetch('/api/user/check-ins')
                 ])
                 
                 if (profileRes.ok) {
@@ -88,6 +99,7 @@ export default function MemberDashboard() {
 
                 if (savedRes.ok) setSavedLocations(await savedRes.json())
                 if (leaderRes.ok) setLeaderboard(await leaderRes.json())
+                if (checkInRes.ok) setCheckIns(await checkInRes.json())
 
             } catch (error) {
                 console.error(error)
@@ -181,6 +193,30 @@ export default function MemberDashboard() {
                     <StatCard label="已發表評論" value={profile._count.reviews} icon="📝" link="/member/history" linkText="紀錄" />
                     <StatCard label="已回報問題" value={profile._count.reports} icon="📢" link="/member/reports" linkText="紀錄" />
                     <StatCard label="已申請地點" value={profile._count.requests} icon="📍" link="/member/requests" linkText="紀錄" />
+                </div>
+
+                {/* Poop History Heatmap */}
+                <div className="bg-white rounded-2xl p-6 shadow-sm">
+                    <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                        💩 歷史大便紀錄
+                    </h2>
+                    <PoopCalendar checkIns={checkIns} />
+                    
+                    <div className="mt-6">
+                        <h3 className="text-sm font-semibold text-gray-700 mb-3">最近打卡</h3>
+                        {checkIns.length === 0 ? (
+                             <p className="text-gray-500 text-xs">還沒有打卡紀錄，快去尋找舒適的廁所吧！</p>
+                        ) : (
+                            <div className="space-y-2">
+                                {checkIns.slice(0, 5).map(checkIn => (
+                                    <div key={checkIn.id} className="flex justify-between items-center text-sm border-b border-gray-100 pb-2">
+                                        <span className="font-medium text-gray-800">{checkIn.location.name}</span>
+                                        <span className="text-gray-500 text-xs">{new Date(checkIn.createdAt).toLocaleString()}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {/* Saved Locations */}
@@ -305,6 +341,127 @@ export default function MemberDashboard() {
       )}
     </div>
   )
+}
+
+function PoopCalendar({ checkIns }: { checkIns: CheckIn[] }) {
+    const [currentDate, setCurrentDate] = useState(new Date())
+
+    const getDaysInMonth = (year: number, month: number) => {
+        return new Date(year, month + 1, 0).getDate()
+    }
+
+    const getFirstDayOfMonth = (year: number, month: number) => {
+        return new Date(year, month, 1).getDay()
+    }
+
+    const handlePrevMonth = () => {
+        setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))
+    }
+
+    const handleNextMonth = () => {
+        setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))
+    }
+
+    const year = currentDate.getFullYear()
+    const month = currentDate.getMonth()
+    const daysInMonth = getDaysInMonth(year, month)
+    const firstDay = getFirstDayOfMonth(year, month)
+
+    // Create array for grid
+    const days = []
+    // Add empty slots for previous month
+    for (let i = 0; i < firstDay; i++) {
+        days.push(null)
+    }
+    // Add days of current month
+    for (let i = 1; i <= daysInMonth; i++) {
+        days.push(new Date(year, month, i))
+    }
+
+    // Map check-ins
+    const counts: Record<string, number> = {}
+    checkIns.forEach(c => {
+        const d = new Date(c.createdAt)
+        const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
+        counts[key] = (counts[key] || 0) + 1
+    })
+
+    const getColor = (count: number) => {
+        if (count === 0) return 'bg-gray-50 hover:bg-gray-100 text-gray-700'
+        if (count === 1) return 'bg-[#D2B48C] text-white font-bold shadow-sm' // Tan
+        return 'bg-[#8B4513] text-white font-bold shadow-sm' // SaddleBrown
+    }
+
+    return (
+        <div className="w-full max-w-md mx-auto bg-white p-2 rounded-xl">
+            <div className="flex justify-between items-center mb-4 px-2">
+                <button 
+                    onClick={handlePrevMonth} 
+                    className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600"
+                >
+                    <ChevronLeft size={20} />
+                </button>
+                <h3 className="font-bold text-lg text-gray-800">
+                    {year} 年 {month + 1} 月
+                </h3>
+                <button 
+                    onClick={handleNextMonth} 
+                    className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600"
+                >
+                    <ChevronRight size={20} />
+                </button>
+            </div>
+            
+            <div className="grid grid-cols-7 gap-2 mb-2">
+                {['日', '一', '二', '三', '四', '五', '六'].map((d, i) => (
+                    <div key={d} className={`text-center text-xs font-medium py-1 ${i === 0 || i === 6 ? 'text-red-400' : 'text-gray-500'}`}>
+                        {d}
+                    </div>
+                ))}
+            </div>
+            
+            <div className="grid grid-cols-7 gap-2">
+                {days.map((day, i) => {
+                    if (!day) return <div key={`empty-${i}`} />
+                    const key = `${day.getFullYear()}-${day.getMonth()}-${day.getDate()}`
+                    const count = counts[key] || 0
+                    const isToday = new Date().toDateString() === day.toDateString()
+                    
+                    return (
+                        <div 
+                            key={i}
+                            className={`
+                                aspect-square flex flex-col items-center justify-center rounded-xl text-sm transition-all relative
+                                ${getColor(count)}
+                                ${isToday ? 'ring-2 ring-blue-400 ring-offset-2' : ''}
+                            `}
+                            title={`${day.toLocaleDateString()}: ${count} 次`}
+                        >
+                            <span>{day.getDate()}</span>
+                            {count > 0 && (
+                                <div className="flex gap-0.5 mt-0.5">
+                                    {Array.from({ length: Math.min(count, 3) }).map((_, idx) => (
+                                        <div key={idx} className="w-1 h-1 rounded-full bg-white/70" />
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )
+                })}
+            </div>
+            
+            <div className="flex items-center justify-end gap-4 mt-6 text-xs text-gray-500 px-2">
+                <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded bg-[#D2B48C]"></div> 
+                    <span>1 次</span>
+                </div>
+                <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded bg-[#8B4513]"></div> 
+                    <span>2 次+</span>
+                </div>
+            </div>
+        </div>
+    )
 }
 
 // --- Sub Components ---

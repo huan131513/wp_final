@@ -21,6 +21,14 @@ export interface Location {
   updatedAt: Date;
 
   reviews?: Review[];
+  checkIns?: CheckIn[];
+}
+
+export interface CheckIn {
+  id: string;
+  userId: string;
+  locationId: string;
+  createdAt: Date;
 }
 
 export interface Review {
