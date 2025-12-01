@@ -37,6 +37,7 @@ export function MapComponent({
     const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null)
     const [navigationInfo, setNavigationInfo] = useState<{ duration: string, distance: string } | null>(null)
     const [infoWindowWidth, setInfoWindowWidth] = useState(350)
+    const [poops, setPoops] = useState<{ id: number, style: React.CSSProperties }[]>([])
 
   useEffect(() => {
         const handleResize = () => {
@@ -119,6 +120,21 @@ export function MapComponent({
         }
     }
 
+    const triggerPoopExplosion = () => {
+        const newPoops = Array.from({ length: 30 }).map((_, i) => ({
+            id: Date.now() + i,
+            style: {
+                left: '50%',
+                top: '50%',
+                '--tx': `${(Math.random() - 0.5) * 500}px`,
+                '--ty': `${(Math.random() - 0.5) * 500}px`,
+                '--r': `${(Math.random() - 0.5) * 720}deg`,
+            } as React.CSSProperties
+        }))
+        setPoops(newPoops)
+        setTimeout(() => setPoops([]), 1000)
+    }
+
     const handleCheckIn = async () => {
         if (!selectedLocation || !session) return
 
@@ -131,6 +147,7 @@ export function MapComponent({
 
             if (res.ok) {
                 toast.success('打卡成功！')
+                triggerPoopExplosion()
             } else {
                 const data = await res.json()
                 toast.error(data.error || '打卡失敗')
@@ -390,9 +407,15 @@ export function MapComponent({
         }
     ]
 
-  return (
-    <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''}>
-            <div className="h-full w-full rounded-xl overflow-hidden border border-gray-200 shadow-inner relative">
+    return (
+        <>
+            {/* Poop Explosion Overlay */}
+            {poops.map(p => (
+                <div key={p.id} className="poop-particle" style={p.style}>💩</div>
+            ))}
+
+            <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''}>
+                <div className="h-full w-full rounded-xl overflow-hidden border border-gray-200 shadow-inner relative">
         <Map
           defaultCenter={NTU_CENTER}
           defaultZoom={16}
@@ -604,6 +627,7 @@ export function MapComponent({
                 )}
       </div>
     </APIProvider>
+    </>
   )
 }
 
