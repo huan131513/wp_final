@@ -29,6 +29,11 @@ export interface CheckIn {
   userId: string;
   locationId: string;
   createdAt: Date;
+  user?: {
+    id: string;
+    name: string;
+    avatar: string | null;
+  };
 }
 
 export interface Review {
