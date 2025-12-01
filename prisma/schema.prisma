@@ -22,6 +22,7 @@ model User {
   achievements UserAchievement[]
   savedLocations SavedLocation[] // 新增：收藏關聯
   notifications  Notification[]  // 新增：通知關聯
+  checkIns       CheckIn[]       // 新增：打卡關聯
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -54,6 +55,7 @@ model Location {
   reviews     Review[]
   reports     Report[]
   savedBy     SavedLocation[] // 新增：被收藏關聯
+  checkIns    CheckIn[]       // 新增：打卡關聯
 
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
@@ -202,4 +204,13 @@ model ReviewLike {
   createdAt DateTime @default(now())
 
   @@unique([reviewId, userId]) // 防止重複點讚
+}
+
+model CheckIn {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  locationId String
+  location  Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
 }

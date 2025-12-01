@@ -41,7 +41,7 @@ export function MapComponent({
   useEffect(() => {
         const handleResize = () => {
             setInfoWindowWidth(Math.min(350, window.innerWidth - 40))
-        }
+          }
         handleResize()
         window.addEventListener('resize', handleResize)
         return () => window.removeEventListener('resize', handleResize)
@@ -116,6 +116,28 @@ export function MapComponent({
         } catch (e) {
             console.error(e)
             toast.error('操作失敗')
+        }
+    }
+
+    const handleCheckIn = async () => {
+        if (!selectedLocation || !session) return
+
+        try {
+            const res = await fetch('/api/check-ins', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ locationId: selectedLocation.id })
+            })
+
+            if (res.ok) {
+                toast.success('打卡成功！')
+            } else {
+                const data = await res.json()
+                toast.error(data.error || '打卡失敗')
+            }
+        } catch (e) {
+            console.error(e)
+            toast.error('打卡失敗')
         }
     }
 
@@ -421,12 +443,12 @@ export function MapComponent({
              </AdvancedMarker>
            ))}
 
-                    {selectedLocation && (
-                        <InfoWindow
-                            position={{ lat: selectedLocation.lat, lng: selectedLocation.lng }}
+           {selectedLocation && (
+             <InfoWindow
+               position={{ lat: selectedLocation.lat, lng: selectedLocation.lng }}
                             onCloseClick={() => onLocationSelect(null)}
                             maxWidth={infoWindowWidth}
-                        >
+             >
                             <div className="p-2 min-w-[250px] max-h-[400px] overflow-y-auto pr-4">
                                 <div className="flex items-center gap-2 mb-3">
                                     <div className="text-2xl">
@@ -435,36 +457,45 @@ export function MapComponent({
                                         {selectedLocation.type === 'NURSING_ROOM' && '🍼'}
                                     </div>
                                     <div className="w-100 flex-1">
-                                        <div className="flex justify-between gap-2 ">
-                                            <h3 className="font-bold text-xl text-gray-900 leading-none">{selectedLocation.name}</h3>
-                                            <div className="flex gap-1">
-                                                {session && (
-                                                    <button
-                                                        onClick={handleToggleSave}
-                                                        className={`p-1.5 rounded shadow-sm transition-colors ${savedLocationIds.has(selectedLocation.id) ? 'bg-pink-100 text-pink-500' : 'bg-gray-100 text-gray-400 hover:text-pink-400'}`}
-                                                        title={savedLocationIds.has(selectedLocation.id) ? '取消收藏' : '收藏'}
-                                                    >
-                                                        <Heart size={14} fill={savedLocationIds.has(selectedLocation.id) ? 'currentColor' : 'none'} />
-                                                    </button>
-                                                )}
+                                        <div className="flex justify-between items-start gap-2">
+                                            <h3 className="font-bold text-xl text-gray-900 leading-tight mb-1">{selectedLocation.name}</h3>
+                                            {session && (
                                                 <button
-                                                    onClick={() => handleNavigate()}
-                                                    className="bg-blue-500 hover:bg-blue-600 text-white text-xs px-2 py-1 rounded shadow-sm transition-colors whitespace-nowrap"
+                                                    onClick={handleToggleSave}
+                                                    className={`p-1.5 rounded shadow-sm transition-colors flex-shrink-0 ${savedLocationIds.has(selectedLocation.id) ? 'bg-pink-100 text-pink-500' : 'bg-gray-100 text-gray-400 hover:text-pink-400'}`}
+                                                    title={savedLocationIds.has(selectedLocation.id) ? '取消收藏' : '收藏'}
                                                 >
-                                                    導航
+                                                    <Heart size={16} fill={savedLocationIds.has(selectedLocation.id) ? 'currentColor' : 'none'} />
                                                 </button>
-                                                {session && (
-                                                    <button
-                                                        onClick={() => setIsReportModalOpen(true)}
-                                                        className="bg-yellow-400 hover:bg-yellow-500 text-white text-xs px-2 py-1 rounded shadow-sm transition-colors whitespace-nowrap"
-                                                    >
-                                                        回報
-                                                    </button>
-                                                )}
-                                            </div>
+                                            )}
                                         </div>
-                                        <div className="text-sm font-medium text-gray-500 mt-1">
+                                        <div className="text-sm font-medium text-gray-500 mb-2">
                                             {formatLocationType(selectedLocation.type)}
+                                        </div>
+                                        
+                                        <div className="flex flex-wrap gap-2 mt-2">
+                                            <button
+                                                onClick={() => handleNavigate()}
+                                                className="flex-1 bg-[#5485C2] hover:bg-blue-600 font-bold text-white text-xs py-1.5 px-2 rounded shadow-sm transition-colors whitespace-nowrap text-center"
+                                            >
+                                                導航
+                                            </button>
+                                            {(selectedLocation.type === 'TOILET' || selectedLocation.type === 'ACCESSIBLE_TOILET') && session && (
+                                                <button
+                                                    onClick={handleCheckIn}
+                                                    className="flex-1 bg-[#BF6C06] hover:bg-[#6d360f] text-white font-bold text-xs py-1.5 px-2 rounded shadow-sm transition-colors whitespace-nowrap text-center"
+                                                >
+                                                    打卡
+                                                </button>
+                                            )}
+                                            {session && (
+                                                <button
+                                                    onClick={() => setIsReportModalOpen(true)}
+                                                    className="flex-1 bg-[#D4B92B] hover:bg-yellow-500 text-white font-bold text-xs py-1.5 px-2 rounded shadow-sm transition-colors whitespace-nowrap text-center"
+                                                >
+                                                    回報
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                  </div>
@@ -506,7 +537,7 @@ export function MapComponent({
                                     <div className="mb-4 text-sm text-gray-600 bg-gray-50 p-2 rounded">
                         {selectedLocation.description}
                                     </div>
-                                )}
+                 )}
 
                                 <ReviewSection
                                     key={selectedLocation.id}

@@ -303,7 +303,7 @@ export default function DashboardClient() {
     <div className="p-4 md:p-8 max-w-[1600px] mx-auto">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-white">Admin Dashboard</h1>
           <div className="flex flex-wrap gap-2 w-full md:w-auto">
               <NavButton active={activeTab === 'overview'} onClick={() => handleSwitchTab('overview')}>總覽</NavButton>
               <NavButton active={activeTab === 'locations'} onClick={() => handleSwitchTab('locations')}>設施資訊</NavButton>
@@ -434,20 +434,20 @@ export default function DashboardClient() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             {/* Left Column: Form */}
             <div className="lg:col-span-5 order-2 lg:order-1">
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden sticky top-8">
-                    <div className="p-6 border-b border-gray-100 bg-gray-50/50">
-                        <h2 className="text-lg font-bold text-gray-900">{editingLocation ? '編輯地點' : '新增地點'}</h2>
-                        <p className="text-sm text-gray-500 mt-1">請填寫以下資訊以{editingLocation ? '更新' : '建立'}設施。</p>
+                <div className="bg-black rounded-2xl shadow-sm border border-white overflow-hidden sticky top-8">
+                    <div className="p-6 border-b border-gray-100 bg-black">
+                        <h2 className="text-lg font-bold text-white">{editingLocation ? '編輯地點' : '新增地點'}</h2>
+                        <p className="text-sm text-white mt-1">請填寫以下資訊以{editingLocation ? '更新' : '建立'}設施。</p>
                     </div>
                     <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-5">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">名稱</label>
+                            <label className="block text-sm font-medium text-white mb-1.5">名稱</label>
                             <input {...register('name')} className="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all" placeholder="例如：博雅教學館 1F 男廁" />
                         </div>
                         
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1.5">類型</label>
+                                <label className="block text-sm font-medium text-white mb-1.5">類型</label>
                                 <select {...register('type')} className="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all">
                                     <option value="TOILET">一般廁所</option>
                                     <option value="ACCESSIBLE_TOILET">無障礙廁所</option>
@@ -455,18 +455,18 @@ export default function DashboardClient() {
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1.5">樓層</label>
+                                <label className="block text-sm font-medium text-white mb-1.5">樓層</label>
                                 <input {...register('floor')} className="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all" placeholder="例如：1F" />
                             </div>
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">描述</label>
+                            <label className="block text-sm font-medium text-white mb-1.5">描述</label>
                             <textarea {...register('description')} rows={3} className="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all" placeholder="關於此地點的更多細節..." />
                         </div>
                         
-                        <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">設施與功能</label>
+                        <div className="bg-black p-4 rounded-xl border border-gray-100">
+                            <label className="block text-xs font-semibold text-white uppercase tracking-wider mb-3">設施與功能</label>
                             <div className="space-y-2">
                                 {selectedType === 'TOILET' && (
                                     <>
@@ -493,7 +493,7 @@ export default function DashboardClient() {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">地圖位置</label>
+                            <label className="block text-sm font-medium text-white mb-2">地圖位置</label>
                             <div className="h-[250px] w-full border border-gray-200 rounded-xl overflow-hidden relative shadow-inner">
                                 <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''}>
                                     <Map
@@ -546,7 +546,7 @@ export default function DashboardClient() {
             {/* Right Column: List */}
             <div className="lg:col-span-7 order-1 lg:order-2">
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-bold text-gray-900">現有地點列表</h2>
+                    <h2 className="text-lg font-bold text-white">現有地點列表</h2>
                     <span className="text-xs font-medium bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full">
                         共 {filteredLocations.length} 筆
                     </span>
@@ -564,7 +564,7 @@ export default function DashboardClient() {
                             </div>
                         )}
                         {filteredLocations.map(loc => (
-                            <div key={loc.id} className="group bg-white p-4 rounded-xl border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all duration-200 flex justify-between items-start">
+                            <div key={loc.id} className="group bg-[#AAC8DE] p-4 rounded-xl border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all duration-200 flex justify-between items-start">
                                 <div>
                                     <div className="flex items-center gap-2 mb-1">
                                         <h3 className="font-bold text-gray-900">{loc.name}</h3>
