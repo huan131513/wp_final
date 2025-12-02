@@ -585,7 +585,7 @@ export function MapComponent({
                                     </div>
                                 )}
 
-                                {selectedLocation.description && (
+                 {selectedLocation.description && (
                                     <div className="mb-4 text-sm text-gray-600 bg-gray-50 p-2 rounded">
                         {selectedLocation.description}
                                     </div>

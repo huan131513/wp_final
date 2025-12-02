@@ -3,10 +3,25 @@ import { prisma } from '@/lib/prisma'
 
 export async function GET() {
   try {
-    // Clear existing achievements to avoid duplicates during dev
-    // In production, you might want to use upsert instead
-    // await prisma.userAchievement.deleteMany()
-    // await prisma.achievement.deleteMany()
+    // Clean up old "Poop Bro" levels to ensure only "Poop Bro" exists
+    // Deleting by name if they exist. 
+    // Note: This will also delete UserAchievement records linked to these achievements due to onDelete: Cascade usually,
+    // but Prisma schema might not have cascade set up in schema.prisma explicitly for implicit relations or manual relations.
+    // However, assuming we want to remove them.
+    
+    const oldNames = ['屎哥 LV.1', '屎哥 LV.2', '屎哥 LV.3']
+    await prisma.userAchievement.deleteMany({
+        where: {
+            achievement: {
+                name: { in: oldNames }
+            }
+        }
+    })
+    await prisma.achievement.deleteMany({
+        where: {
+            name: { in: oldNames }
+        }
+    })
 
     const achievements = [
         // 評論類
@@ -60,6 +75,30 @@ export async function GET() {
             icon: '🚩',
             criteriaType: 'REQUEST_COUNT',
             threshold: 3
+        },
+        // 大便類 - 屎哥 (連擊 7 天)
+        {
+            name: '屎哥',
+            description: '連續拉屎打卡 7 天',
+            icon: '💩',
+            criteriaType: 'STREAK_7_DAYS',
+            threshold: 1
+        },
+        // 大便類 - 屎帝 (連擊 30 天)
+        {
+            name: '屎帝',
+            description: '連續拉屎打卡 30 天',
+            icon: '👑',
+            criteriaType: 'STREAK_30_DAYS',
+            threshold: 30
+        },
+        // 大便類 - 兜不住洗 (單日 5 次)
+        {
+            name: '兜不住洗',
+            description: '在一天內打卡 5 次',
+            icon: '🚽',
+            criteriaType: 'DAILY_5_TIMES',
+            threshold: 1
         }
     ]
 
