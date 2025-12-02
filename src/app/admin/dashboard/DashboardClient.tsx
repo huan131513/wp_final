@@ -320,13 +320,13 @@ export default function DashboardClient() {
       
       {/* Search and Filter Bar */}
       {activeTab !== 'overview' && (
-          <div className="mb-6 p-4 bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 items-center">
+          <div className="mb-6 p-4 bg-[#111827] rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 items-center">
               <div className="relative flex-1 w-full">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <input 
                       type="text" 
                       placeholder="搜尋名稱、內容或使用者..." 
-                      className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm"
+                      className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 text-black rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                   />
@@ -334,9 +334,9 @@ export default function DashboardClient() {
               
               {activeTab === 'locations' && (
                   <div className="flex items-center gap-2 w-full md:w-auto">
-                      <Filter className="text-gray-400 w-4 h-4" />
+                      <Filter className="text-black w-4 h-4" />
                       <select 
-                          className="flex-1 md:w-48 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 cursor-pointer"
+                          className="flex-1 md:w-48 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none text-black focus:border-blue-500 cursor-pointer"
                           value={typeFilter}
                           onChange={(e) => setTypeFilter(e.target.value)}
                       >
@@ -442,13 +442,13 @@ export default function DashboardClient() {
                     <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-5">
                         <div>
                             <label className="block text-sm font-medium text-white mb-1.5">名稱</label>
-                            <input {...register('name')} className="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all" placeholder="例如：博雅教學館 1F 男廁" />
+                            <input {...register('name')} className="w-full p-2.5 bg-white border border-gray-200 text-black rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all" placeholder="例如：博雅教學館 1F 男廁" />
                         </div>
                         
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-white mb-1.5">類型</label>
-                                <select {...register('type')} className="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all">
+                                <select {...register('type')} className="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-black text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all">
                                     <option value="TOILET">一般廁所</option>
                                     <option value="ACCESSIBLE_TOILET">無障礙廁所</option>
                                     <option value="NURSING_ROOM">哺乳室</option>
@@ -456,13 +456,13 @@ export default function DashboardClient() {
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-white mb-1.5">樓層</label>
-                                <input {...register('floor')} className="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all" placeholder="例如：1F" />
+                                <input {...register('floor')} className="w-full p-2.5 bg-white border text-black border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all" placeholder="例如：1F" />
                             </div>
                         </div>
 
                         <div>
                             <label className="block text-sm font-medium text-white mb-1.5">描述</label>
-                            <textarea {...register('description')} rows={3} className="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all" placeholder="關於此地點的更多細節..." />
+                            <textarea {...register('description')} rows={3} className="w-full p-2.5 text-black bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all" placeholder="關於此地點的更多細節..." />
                         </div>
                         
                         <div className="bg-black p-4 rounded-xl border border-gray-100">
@@ -470,7 +470,7 @@ export default function DashboardClient() {
                             <div className="space-y-2">
                                 {selectedType === 'TOILET' && (
                                     <>
-                                        <FacilityCheckbox id="hasTissue" label="提供衛生紙" icon="🧻" register={register} />
+                                        <FacilityCheckbox id="hasTissue" label="提供衛生紙" icon="🧻" className="text-white" register={register} />
                                         <FacilityCheckbox id="hasDryer" label="烘手機" icon="💨" register={register} />
                                         <FacilityCheckbox id="hasSeat" label="坐式馬桶" icon="🚽" register={register} />
                                     </>
@@ -557,35 +557,35 @@ export default function DashboardClient() {
                         {[1, 2, 3, 4].map(i => <SkeletonCard key={i} />)}
                     </div>
                 ) : (
-                    <div className="space-y-3 h-[calc(100vh-200px)] overflow-y-auto pr-2 custom-scrollbar">
+                    <div className="space-y-3 h-[calc(100vh-200px)] overflow-y-auto pr-2 custom-scrollbar ">
                         {filteredLocations.length === 0 && (
                             <div className="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
                                 <p className="text-gray-400 text-sm">沒有找到符合的地點</p>
                             </div>
                         )}
                         {filteredLocations.map(loc => (
-                            <div key={loc.id} className="group bg-[#AAC8DE] p-4 rounded-xl border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all duration-200 flex justify-between items-start">
+                            <div key={loc.id} className="group bg-[#111827] p-4 rounded-xl border border-gray-800 shadow-[0_0_15px_rgba(255,255,255,0.1)] hover:shadow-[0_0_20px_rgba(255,255,255,0.2)] transition-all duration-200 flex justify-between items-start ">
                                 <div>
                                     <div className="flex items-center gap-2 mb-1">
-                                        <h3 className="font-bold text-gray-900">{loc.name}</h3>
+                                        <h3 className="font-bold text-white">{loc.name}</h3>
                                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium 
-                                            ${loc.type === 'TOILET' ? 'bg-blue-50 text-blue-700' : 
-                                              loc.type === 'ACCESSIBLE_TOILET' ? 'bg-purple-50 text-purple-700' : 
-                                              'bg-pink-50 text-pink-700'}`}>
+                                            ${loc.type === 'TOILET' ? 'bg-blue-900/50 text-blue-100 border border-blue-800' : 
+                                              loc.type === 'ACCESSIBLE_TOILET' ? 'bg-purple-900/50 text-purple-100 border border-purple-800' : 
+                                              'bg-pink-900/50 text-pink-100 border border-pink-800'}`}>
                                             {loc.type === 'TOILET' ? '一般廁所' : loc.type === 'ACCESSIBLE_TOILET' ? '無障礙' : '哺乳室'}
                                         </span>
                                     </div>
-                                    <p className="text-sm text-gray-500 flex items-center gap-1">
-                                        <span className="inline-block w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+                                    <p className="text-sm text-gray-400 flex items-center gap-1">
+                                        <span className="inline-block w-1.5 h-1.5 rounded-full bg-gray-600"></span>
                                         {loc.floor || '未知樓層'}
                                     </p>
-                                    {loc.description && <p className="text-xs text-gray-400 mt-2 line-clamp-1">{loc.description}</p>}
+                                    {loc.description && <p className="text-xs text-gray-500 mt-2 line-clamp-1">{loc.description}</p>}
                                 </div>
                                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button onClick={() => handleEdit(loc)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="編輯">
+                                    <button onClick={() => handleEdit(loc)} className="p-2 text-gray-400 hover:text-blue-400 hover:bg-gray-800 rounded-lg transition-colors" title="編輯">
                                         <Edit size={16} />
                                     </button>
-                                    <button onClick={() => handleDelete(loc.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="刪除">
+                                    <button onClick={() => handleDelete(loc.id)} className="p-2 text-gray-400 hover:text-red-400 hover:bg-gray-800 rounded-lg transition-colors" title="刪除">
                                         <Trash2 size={16} />
                                     </button>
                                 </div>
@@ -600,8 +600,8 @@ export default function DashboardClient() {
       {activeTab === 'reports' && (
           <div className="space-y-4 max-w-4xl mx-auto">
               <div className="flex items-center justify-between mb-2">
-                  <h2 className="text-xl font-bold text-gray-900">Member Reports</h2>
-                  <span className="text-sm text-gray-500">{filteredReports.length} reports</span>
+                  <h2 className="text-xl font-bold text-white">Member Reports</h2>
+                  <span className="text-sm text-white">{filteredReports.length} reports</span>
               </div>
               
               {isLoading ? (
@@ -663,8 +663,8 @@ export default function DashboardClient() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             <div className="lg:col-span-7 space-y-4 order-2 lg:order-1">
               <div className="flex items-center justify-between mb-2">
-                  <h2 className="text-xl font-bold text-gray-900">Facility Requests</h2>
-                  <span className="text-sm text-gray-500">{filteredRequests.length} requests</span>
+                  <h2 className="text-xl font-bold text-white">Facility Requests</h2>
+                  <span className="text-sm text-white">{filteredRequests.length} requests</span>
               </div>
 
               {isLoading ? (
@@ -810,12 +810,12 @@ function NavButton({ active, children, onClick }: { active: boolean, children: R
     )
 }
 
-function FacilityCheckbox({ id, label, icon, register }: { id: Path<LocationFormData>, label: string, icon: string, register: UseFormRegister<LocationFormData> }) {
+function FacilityCheckbox({ id, label, icon, className, register }: { id: Path<LocationFormData>, label: string, icon: string, className?: string, register: UseFormRegister<LocationFormData> }) {
     return (
-        <label className="flex items-center justify-between p-2.5 hover:bg-white rounded-lg transition-colors cursor-pointer border border-transparent hover:border-gray-200 group">
+        <label className={`flex items-center justify-between p-2.5 hover:bg-white rounded-lg transition-colors cursor-pointer border border-transparent hover:border-gray-200 group ${className || ''}`}>
             <div className="flex items-center gap-3">
                 <span className="text-lg opacity-70 group-hover:opacity-100 transition-opacity">{icon}</span>
-                <span className="text-sm text-gray-600 group-hover:text-gray-900 select-none">{label}</span>
+                <span className="text-sm text-gray-400 group-hover:text-gray-900 select-none">{label}</span>
             </div>
             <input 
                 type="checkbox" 

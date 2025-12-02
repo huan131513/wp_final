@@ -26,6 +26,9 @@ export async function GET() {
             achievementId: true,
             unlockedAt: true
           }
+        },
+        checkIns: {
+            orderBy: { createdAt: 'asc' } // Get all check-ins for streak calculation, sorted asc
         }
       }
     })
@@ -33,6 +36,65 @@ export async function GET() {
     if (!user) {
       return new NextResponse('User not found', { status: 404 })
     }
+
+    // Helper to calculate streaks
+    const calculateStreaks = (dates: Date[]) => {
+        if (dates.length === 0) return { maxStreak: 0, currentStreak: 0, streakCount7: 0, streakCount30: 0 }
+
+        // Convert to date strings YYYY-MM-DD to ignore time and remove duplicates
+        const uniqueDates = Array.from(new Set(dates.map(d => d.toISOString().split('T')[0]))).sort()
+        
+        let currentStreak = 0
+        let maxStreak = 0
+        let streakCount7 = 0 // Count of 7-day streaks
+        let tempStreak = 0
+        
+        let lastDate: Date | null = null
+
+        for (const dateStr of uniqueDates) {
+            const currentDate = new Date(dateStr)
+            
+            if (!lastDate) {
+                tempStreak = 1
+            } else {
+                const diffTime = Math.abs(currentDate.getTime() - lastDate.getTime())
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+                
+                if (diffDays === 1) {
+                    tempStreak++
+                } else {
+                    // Streak broken
+                    // Check if previous streak met criteria
+                    streakCount7 += Math.floor(tempStreak / 7)
+                    tempStreak = 1
+                }
+            }
+            lastDate = currentDate
+            maxStreak = Math.max(maxStreak, tempStreak)
+        }
+
+        // Add final streak
+        streakCount7 += Math.floor(tempStreak / 7)
+        currentStreak = tempStreak
+
+        return { maxStreak, currentStreak, streakCount7 }
+    }
+
+    // Helper to calculate max daily check-ins
+    const calculateMaxDailyCheckIns = (dates: Date[]) => {
+        const counts: Record<string, number> = {}
+        let maxDaily = 0
+        for (const d of dates) {
+            const key = d.toISOString().split('T')[0]
+            counts[key] = (counts[key] || 0) + 1
+            maxDaily = Math.max(maxDaily, counts[key])
+        }
+        return maxDaily
+    }
+
+    const checkInDates = user.checkIns.map(c => new Date(c.createdAt))
+    const streaks = calculateStreaks(checkInDates)
+    const maxDailyCheckIns = calculateMaxDailyCheckIns(checkInDates)
 
     // 1. Get all defined achievements
     const allAchievements = await prisma.achievement.findMany()
@@ -49,14 +111,30 @@ export async function GET() {
         let currentVal = 0
 
         // Calculate progress based on criteria
-        if (ach.criteriaType === 'REVIEW_COUNT') currentVal = user._count.reviews
-        else if (ach.criteriaType === 'REPORT_COUNT') currentVal = user._count.reports
-        else if (ach.criteriaType === 'REQUEST_COUNT') currentVal = user._count.requests
+        if (ach.criteriaType === 'REVIEW_COUNT') {
+            currentVal = user._count.reviews
+        } else if (ach.criteriaType === 'REPORT_COUNT') {
+            currentVal = user._count.reports
+        } else if (ach.criteriaType === 'REQUEST_COUNT') {
+            currentVal = user._count.requests
+        } else if (ach.criteriaType === 'STREAK_7_DAYS') {
+            currentVal = streaks.streakCount7
+        } else if (ach.criteriaType === 'STREAK_30_DAYS') {
+            // Use maxStreak directly, threshold is 30
+            currentVal = streaks.maxStreak
+        } else if (ach.criteriaType === 'DAILY_5_TIMES') {
+            currentVal = maxDailyCheckIns
+        }
         
         progress = Math.min(100, Math.floor((currentVal / ach.threshold) * 100))
 
         // Unlock if criteria met but not yet in DB
-        if (!isUnlocked && currentVal >= ach.threshold) {
+        let shouldUnlock = false
+        if (!isUnlocked) {
+             shouldUnlock = currentVal >= ach.threshold
+        }
+
+        if (shouldUnlock) {
             await prisma.userAchievement.create({
                 data: {
                     userId: user.id,
@@ -79,6 +157,7 @@ export async function GET() {
     // 3. Construct response
     const profileData = {
         ...user,
+        checkIns: undefined, // Don't send all check-ins in profile, too heavy
         achievements: processedAchievements.sort((a, b) => {
             // Sort: Unlocked first, then by threshold
             if (a.isUnlocked === b.isUnlocked) return a.threshold - b.threshold

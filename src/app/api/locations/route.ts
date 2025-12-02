@@ -135,11 +135,11 @@ export async function POST(request: Request) {
   try {
     const body = await request.json()
     const validatedData = locationSchema.parse(body)
-
+    
     const location = await prisma.location.create({
       data: validatedData,
     })
-
+    
     return NextResponse.json(location)
   } catch (error) {
     console.error(error)

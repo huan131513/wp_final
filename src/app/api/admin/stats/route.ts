@@ -32,7 +32,7 @@ export async function GET() {
         prisma.review.groupBy({
             by: ['userId'],
             where: { createdAt: { gte: startOfToday } },
-        }).then(res => res.length) // Distinct users who reviewed today
+        }).then((res: { userId: string | null }[]) => res.length) // Distinct users who reviewed today
     ])
 
     // 2. Trend Data (Last 7 Days) for Reviews & Reports
@@ -58,8 +58,8 @@ export async function GET() {
 
         trends.push({
             name: dateStr,
-            reviews: last7DaysReviews.filter(r => r.createdAt >= start && r.createdAt < end).length,
-            reports: last7DaysReports.filter(r => r.createdAt >= start && r.createdAt < end).length
+            reviews: last7DaysReviews.filter((r: { createdAt: Date }) => r.createdAt >= start && r.createdAt < end).length,
+            reports: last7DaysReports.filter((r: { createdAt: Date }) => r.createdAt >= start && r.createdAt < end).length
         })
     }
 
