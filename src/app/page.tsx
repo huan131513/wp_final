@@ -36,8 +36,12 @@ function HomeContent() {
   }, [locations, initialLocationId])
 
   useEffect(() => {
-    if (navigator.geolocation) {
-      const watchId = navigator.geolocation.watchPosition(
+    if (!navigator.geolocation) return
+
+    let watchId: number
+
+    const startWatch = (highAccuracy: boolean) => {
+      watchId = navigator.geolocation.watchPosition(
         (position) => {
           setUserLocation({
             lat: position.coords.latitude,
@@ -45,15 +49,32 @@ function HomeContent() {
           })
         },
         (error) => {
-          console.error("Error getting user location:", error.message)
-          // Retry with low accuracy if high accuracy fails
-          if (error.code === 3) { // Timeout
-            // Could retry here
+          // Handle errors gracefully
+          if (error.code === 1) {
+             // PERMISSION_DENIED
+             console.warn("User denied geolocation")
+          } else if (highAccuracy) {
+             // If high accuracy failed (TIMEOUT or POSITION_UNAVAILABLE), try low accuracy
+             console.warn(`High accuracy location failed (${error.message}), switching to low accuracy...`)
+             navigator.geolocation.clearWatch(watchId)
+             startWatch(false)
+          } else {
+             // Low accuracy also failed
+             console.warn("Error getting user location:", error.message)
           }
         },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        { 
+            enableHighAccuracy: highAccuracy, 
+            timeout: 10000, 
+            maximumAge: 0 
+        }
       )
-      return () => navigator.geolocation.clearWatch(watchId)
+    }
+
+    startWatch(true)
+
+    return () => {
+        if (watchId) navigator.geolocation.clearWatch(watchId)
     }
   }, [])
 

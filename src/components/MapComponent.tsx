@@ -32,8 +32,6 @@ export function MapComponent({
     const { data: session } = useSession()
     const [map, setMap] = useState<google.maps.Map | null>(null)
     const [isReportModalOpen, setIsReportModalOpen] = useState(false)
-    const [reportContent, setReportContent] = useState('')
-    const reportInputRef = useRef<HTMLTextAreaElement>(null)
     const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null)
     const [navigationInfo, setNavigationInfo] = useState<{ duration: string, distance: string } | null>(null)
     const [infoWindowWidth, setInfoWindowWidth] = useState(350)
@@ -155,32 +153,6 @@ export function MapComponent({
         } catch (e) {
             console.error(e)
             toast.error('打卡失敗')
-        }
-    }
-
-    const handleReportSubmit = async () => {
-        if (!selectedLocation || !session) return
-
-        try {
-            const res = await fetch('/api/reports', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    locationId: selectedLocation.id,
-                    content: reportContent
-                })
-            })
-
-            if (res.ok) {
-                toast.success('感謝您的回報！我們會盡快處理。')
-                setIsReportModalOpen(false)
-                setReportContent('')
-            } else {
-                toast.error('回報失敗，請稍後再試')
-            }
-        } catch (e) {
-            console.error(e)
-            toast.error('回報失敗')
         }
     }
 
@@ -603,44 +575,11 @@ export function MapComponent({
         </Map>
 
                 {/* Report Modal */}
-                {isReportModalOpen && (
-                    <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/50"
-                        onClick={(e) => e.stopPropagation()} // Prevent clicks from reaching map
-                        onMouseDown={(e) => e.stopPropagation()}
-                        onMouseUp={(e) => e.stopPropagation()}
-                        onTouchStart={(e) => e.stopPropagation()}
-                    >
-                        <div className="bg-white p-4 rounded-lg w-80 shadow-xl" onClick={(e) => e.stopPropagation()}>
-                            <h3 className="font-bold text-lg mb-2">回報問題</h3>
-                            <p className="text-sm text-gray-600 mb-2">地點：{selectedLocation?.name}</p>
-                            <textarea
-                                id="report-content"
-                                name="report-content"
-                                ref={reportInputRef}
-                                className="w-full border rounded p-2 text-sm mb-4 h-24 text-black"
-                                placeholder="請描述您遇到的問題..."
-                                value={reportContent}
-                                onChange={e => setReportContent(e.target.value)}
-                                onKeyDown={(e) => e.stopPropagation()} // Key events shouldn't bubble to map
-                                onKeyUp={(e) => e.stopPropagation()}
-                                onInput={(e) => e.stopPropagation()}
-                            />
-                            <div className="flex justify-end gap-2">
-                                <button
-                                    onClick={() => setIsReportModalOpen(false)}
-                                    className="px-3 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded"
-                                >
-                                    取消
-                                </button>
-                                <button
-                                    onClick={handleReportSubmit}
-                                    className="px-3 py-1 text-sm bg-yellow-400 text-white rounded hover:bg-yellow-500"
-                                >
-                                    送出
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+                {isReportModalOpen && selectedLocation && (
+                    <ReportModal 
+                        location={selectedLocation} 
+                        onClose={() => setIsReportModalOpen(false)} 
+                    />
                 )}
 
                 {userLocation && (
@@ -658,6 +597,79 @@ export function MapComponent({
     </APIProvider>
     </>
   )
+}
+
+function ReportModal({ location, onClose }: { location: Location, onClose: () => void }) {
+    const [content, setContent] = useState('')
+    const [isSubmitting, setIsSubmitting] = useState(false)
+
+    const handleSubmit = async () => {
+        if (!content.trim()) return
+
+        setIsSubmitting(true)
+        try {
+            const res = await fetch('/api/reports', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    locationId: location.id,
+                    content: content
+                })
+            })
+
+            if (res.ok) {
+                toast.success('感謝您的回報！我們會盡快處理。')
+                onClose()
+            } else {
+                toast.error('回報失敗，請稍後再試')
+            }
+        } catch (e) {
+            console.error(e)
+            toast.error('回報失敗')
+        } finally {
+            setIsSubmitting(false)
+        }
+    }
+
+    return (
+        <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/50"
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            onMouseUp={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
+        >
+            <div className="bg-white p-4 rounded-lg w-80 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                <h3 className="font-bold text-lg mb-2">回報問題</h3>
+                <p className="text-sm text-gray-600 mb-2">地點：{location.name}</p>
+                <textarea
+                    className="w-full border rounded p-2 text-sm mb-4 h-24 text-black"
+                    placeholder="請描述您遇到的問題..."
+                    value={content}
+                    onChange={e => setContent(e.target.value)}
+                    onKeyDown={(e) => e.stopPropagation()}
+                    onKeyUp={(e) => e.stopPropagation()}
+                    onInput={(e) => e.stopPropagation()}
+                    autoFocus
+                />
+                <div className="flex justify-end gap-2">
+                    <button
+                        onClick={onClose}
+                        className="px-3 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded"
+                        disabled={isSubmitting}
+                    >
+                        取消
+                    </button>
+                    <button
+                        onClick={handleSubmit}
+                        disabled={isSubmitting}
+                        className="px-3 py-1 text-sm bg-yellow-400 text-white rounded hover:bg-yellow-500 disabled:opacity-50"
+                    >
+                        {isSubmitting ? '送出中...' : '送出'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    )
 }
 
 function FacilityItem({ label, has }: { label: string, has: boolean }) {

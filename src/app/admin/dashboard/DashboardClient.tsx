@@ -630,7 +630,7 @@ export default function DashboardClient() {
                                 <div className="pt-3 border-t border-gray-100">
                                     <textarea 
                                         placeholder="輸入回覆內容並解決..." 
-                                        className="w-full p-3 bg-white border border-gray-200 rounded-lg mb-3 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                                        className="w-full p-3 bg-white text-black border border-gray-200 rounded-lg mb-3 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
                                         rows={2}
                                         value={replyContent[report.id] || ''}
                                         onChange={(e) => setReplyContent({ ...replyContent, [report.id]: e.target.value })}
