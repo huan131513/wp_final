@@ -661,18 +661,18 @@ export default function MinesweeperPage() {
                     <div className="text-gray-400 text-sm text-center py-4">暫無紀錄，快來挑戰！</div>
                 ) : (
                     leaderboard.map((entry, idx) => (
-                        <div key={idx} className="flex items-center gap-3 border-b border-gray-100 last:border-0 pb-2 last:pb-0">
+                        <div key={idx} className="flex items-center gap-2 md:gap-3 border-b border-gray-100 last:border-0 pb-2 last:pb-0">
                              <div className={`
-                                w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white
+                                w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0
                                 ${idx === 0 ? 'bg-yellow-400' : idx === 1 ? 'bg-gray-400' : idx === 2 ? 'bg-orange-400' : 'bg-blue-100 text-blue-600'}
                             `}>
                                 {idx + 1}
                             </div>
-                            <div className="flex-1 min-w-0">
-                                <div className="font-medium text-sm truncate">{entry.user.name}</div>
-                                <div className="text-[10px] text-gray-400">{new Date(entry.playedAt).toLocaleDateString()}</div>
+                            <div className="flex-1 min-w-0 overflow-hidden">
+                                <div className="font-medium text-sm truncate" title={entry.user.name}>{entry.user.name || '未知用戶'}</div>
+                                <div className="text-[10px] text-gray-400 truncate">{new Date(entry.playedAt).toLocaleDateString()}</div>
                             </div>
-                            <div className="font-mono font-bold text-gray-900">
+                            <div className="font-mono font-bold text-gray-900 text-sm flex-shrink-0">
                                 {(entry.score / 100).toFixed(2)}s
                             </div>
                         </div>

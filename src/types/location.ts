@@ -1,5 +1,11 @@
 export type LocationType = 'TOILET' | 'ACCESSIBLE_TOILET' | 'NURSING_ROOM';
 
+export interface ActiveIssue {
+  type: string; // 'CLEAN' | 'NO_PAPER' | 'DIRTY' | 'MAINTENANCE' | 'CLOGGED' | 'OTHER'
+  count: number;
+  lastReportTime: string | Date;
+}
+
 export interface Location {
   id: string;
   name: string;
@@ -22,6 +28,12 @@ export interface Location {
 
   reviews?: Review[];
   checkIns?: CheckIn[];
+  
+  // Frontend computed properties
+  currentStatus?: string; // 'CLEAN' | 'NO_PAPER' | 'DIRTY' | 'MAINTENANCE' | 'CLOGGED' | 'OTHER'
+  activeIssues?: ActiveIssue[]; // List of all active issues with details
+  activeReportsCount?: number; // Total active reports (can still be useful)
+  lastReportTime?: string | Date; // Global last report time
 }
 
 export interface CheckIn {

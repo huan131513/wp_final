@@ -27,6 +27,18 @@ export async function GET() {
 
     const locations = await prisma.location.findMany({
       include: {
+        reports: { // 新增：獲取過去 24 小時的未解決回報
+          where: {
+            createdAt: {
+              gte: new Date(Date.now() - 24 * 60 * 60 * 1000)
+            },
+            status: 'PENDING'
+          },
+          select: {
+            type: true,
+            createdAt: true
+          }
+        },
         reviews: {
           where: {
             parentId: null, // 只獲取頂層評論
@@ -102,22 +114,79 @@ export async function GET() {
     })
 
     // 處理評論資料，添加 isLiked 標記
-    const processedLocations = locations.map(location => ({
-      ...location,
-      reviews: location.reviews.map((review: any) => ({
-        ...review,
-        isLiked: review.likes && review.likes.length > 0,
-        likesCount: review._count.likes,
-        repliesCount: review._count.replies,
-        replies: review.replies.map((reply: any) => ({
-          ...reply,
-          isLiked: reply.likes && reply.likes.length > 0,
-          likesCount: reply._count.likes
-        })),
-        likes: undefined, // 移除原始 likes 陣列
-        _count: undefined // 移除 _count
+    const processedLocations = locations.map(location => {
+      // 計算地點即時狀態
+      let currentStatus = 'CLEAN'
+      const reports = location.reports
+      const activeIssuesMap = new Map<string, { count: number, lastReportTime: Date }>()
+      
+      if (reports.length > 0) {
+        // 定義問題優先級 (數字越大越嚴重)
+        const priorities: Record<string, number> = {
+            'MAINTENANCE': 5,
+            'CLOGGED': 4,
+            'NO_PAPER': 3,
+            'DIRTY': 2,
+            'OTHER': 1,
+            'CLEAN': 0
+        }
+
+        let maxPriority = 0
+        
+        for (const report of reports) {
+            // 收集並聚合所有非 CLEAN 的問題類型
+            if (report.type !== 'CLEAN') {
+                if (!activeIssuesMap.has(report.type)) {
+                    activeIssuesMap.set(report.type, { count: 0, lastReportTime: new Date(0) })
+                }
+                
+                const issue = activeIssuesMap.get(report.type)!
+                issue.count++
+                
+                if (new Date(report.createdAt) > issue.lastReportTime) {
+                    issue.lastReportTime = new Date(report.createdAt)
+                }
+            }
+
+            const p = priorities[report.type as string] || 0
+            if (p > maxPriority) {
+                maxPriority = p
+                currentStatus = report.type
+            }
+        }
+      }
+
+      // 轉換 map 為 activeIssues 陣列
+      const activeIssues = Array.from(activeIssuesMap.entries()).map(([type, data]) => ({
+        type,
+        count: data.count,
+        lastReportTime: data.lastReportTime
       }))
-    }))
+
+      // 找出最新的警示回報時間
+      const lastReportTime = reports.length > 0 ? reports.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0].createdAt : null
+
+      return {
+        ...location,
+        currentStatus,
+        activeIssues,
+        activeReportsCount: reports.length,
+        lastReportTime,
+        reviews: location.reviews.map((review: any) => ({
+          ...review,
+          isLiked: review.likes && review.likes.length > 0,
+          likesCount: review._count.likes,
+          repliesCount: review._count.replies,
+          replies: review.replies.map((reply: any) => ({
+            ...reply,
+            isLiked: reply.likes && reply.likes.length > 0,
+            likesCount: reply._count.likes
+          })),
+          likes: undefined, // 移除原始 likes 陣列
+          _count: undefined // 移除 _count
+        }))
+      }
+    })
 
     return NextResponse.json(processedLocations)
   } catch (error) {
