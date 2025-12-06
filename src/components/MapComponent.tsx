@@ -434,7 +434,7 @@ export function MapComponent({
                position={{ lat: loc.lat, lng: loc.lng }}
                             onClick={() => onLocationSelect(loc)}
              >
-                            {getMarkerContent(loc.type)}
+                            {getMarkerContent(loc)}
              </AdvancedMarker>
            ))}
 
@@ -445,6 +445,60 @@ export function MapComponent({
                             maxWidth={infoWindowWidth}
              >
                             <div className="p-2 min-w-[250px] max-h-[400px] overflow-y-auto pr-4">
+                                {selectedLocation.activeIssues && selectedLocation.activeIssues.length > 0 ? (
+                                    <div className="space-y-2 mb-3">
+                                        {selectedLocation.activeIssues.map(issue => {
+                                            const config = {
+                                                'MAINTENANCE': { icon: '🔧', title: '設施維護或故障', bg: 'bg-red-50', text: 'text-red-900', border: 'border-red-200' },
+                                                'CLOGGED': { icon: '🚽', title: '馬桶嚴重堵塞', bg: 'bg-red-50', text: 'text-red-900', border: 'border-red-200' },
+                                                'NO_PAPER': { icon: '🧻', title: '目前缺乏衛生紙', bg: 'bg-yellow-50', text: 'text-yellow-900', border: 'border-yellow-200' },
+                                                'DIRTY': { icon: '🤢', title: '環境髒亂需清理', bg: 'bg-yellow-50', text: 'text-yellow-900', border: 'border-yellow-200' },
+                                                'OTHER': { icon: '⚠️', title: '使用者回報異常', bg: 'bg-gray-50', text: 'text-gray-900', border: 'border-gray-200' }
+                                            }[issue.type] || { icon: '⚠️', title: '使用者回報異常', bg: 'bg-gray-50', text: 'text-gray-900', border: 'border-gray-200' }
+
+                                            return (
+                                                <div key={issue.type} className={`p-3 rounded-lg text-sm flex items-start gap-3 border shadow-sm ${config.bg} ${config.text} ${config.border}`}>
+                                                    <span className="text-xl mt-0.5 flex-shrink-0">{config.icon}</span>
+                                                    <div>
+                                                        <p className="font-bold text-base leading-tight mb-1">{config.title}</p>
+                                                        <p className="text-xs opacity-90 leading-relaxed">
+                                                            最近 24 小時內有 <span className="font-bold">{issue.count}</span> 位使用者回報
+                                                            {issue.lastReportTime && ` (最新：${new Date(issue.lastReportTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})})`}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                ) : selectedLocation.currentStatus && selectedLocation.currentStatus !== 'CLEAN' && (
+                                    // Fallback for locations fetched before api update or if activeIssueTypes is empty but currentStatus is set
+                                    <div className={`mb-3 p-3 rounded-lg text-sm flex items-start gap-3 animate-pulse-slow ${
+                                        selectedLocation.currentStatus === 'MAINTENANCE' || selectedLocation.currentStatus === 'CLOGGED'
+                                            ? 'bg-red-50 text-red-900 border border-red-200 shadow-sm' 
+                                            : 'bg-yellow-50 text-yellow-900 border border-yellow-200 shadow-sm'
+                                    }`}>
+                                        <span className="text-xl mt-0.5 flex-shrink-0">
+                                            {selectedLocation.currentStatus === 'MAINTENANCE' ? '🔧' : 
+                                             selectedLocation.currentStatus === 'CLOGGED' ? '🚽' :
+                                             selectedLocation.currentStatus === 'NO_PAPER' ? '🧻' :
+                                             selectedLocation.currentStatus === 'DIRTY' ? '🤢' : '⚠️'}
+                                        </span>
+                                        <div>
+                                            <p className="font-bold text-base leading-tight mb-1">
+                                                {selectedLocation.currentStatus === 'MAINTENANCE' ? '設施維護或故障' : 
+                                                 selectedLocation.currentStatus === 'CLOGGED' ? '馬桶嚴重堵塞' :
+                                                 selectedLocation.currentStatus === 'NO_PAPER' ? '目前缺乏衛生紙' :
+                                                 selectedLocation.currentStatus === 'DIRTY' ? '環境髒亂需清理' :
+                                                 '使用者回報異常'}
+                                            </p>
+                                            <p className="text-xs opacity-90 leading-relaxed">
+                                                最近 24 小時內有 <span className="font-bold">{selectedLocation.activeReportsCount}</span> 位使用者回報
+                                                {selectedLocation.lastReportTime && ` (最新：${new Date(selectedLocation.lastReportTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})})`}
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+
                                 <div className="flex items-center gap-2 mb-3">
                                     <div className="text-2xl">
                                         {selectedLocation.type === 'TOILET' && '🚽'}
@@ -601,10 +655,12 @@ export function MapComponent({
 
 function ReportModal({ location, onClose }: { location: Location, onClose: () => void }) {
     const [content, setContent] = useState('')
+    const [type, setType] = useState<'CLEAN' | 'NO_PAPER' | 'DIRTY' | 'MAINTENANCE' | 'CLOGGED' | 'OTHER'>('OTHER')
     const [isSubmitting, setIsSubmitting] = useState(false)
 
     const handleSubmit = async () => {
-        if (!content.trim()) return
+        // 如果選擇了特定類型，內容可以是選填的，或者預設填充
+        if (!content.trim() && type === 'OTHER') return
 
         setIsSubmitting(true)
         try {
@@ -613,7 +669,8 @@ function ReportModal({ location, onClose }: { location: Location, onClose: () =>
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     locationId: location.id,
-                    content: content
+                    content: content || getDefaultContent(type),
+                    type
                 })
             })
 
@@ -631,30 +688,77 @@ function ReportModal({ location, onClose }: { location: Location, onClose: () =>
         }
     }
 
+    const getDefaultContent = (t: string) => {
+        switch(t) {
+            case 'CLEAN': return '使用者回報：狀態正常'
+            case 'NO_PAPER': return '使用者回報：缺少衛生紙'
+            case 'DIRTY': return '使用者回報：環境髒亂'
+            case 'MAINTENANCE': return '使用者回報：設施故障'
+            case 'CLOGGED': return '使用者回報：馬桶堵塞'
+            default: return '其他問題'
+        }
+    }
+
+    const reportTypes = [
+        { id: 'CLEAN', label: '正常/已恢復', icon: '🟢', color: 'bg-green-100 text-green-700 border-green-200' },
+        { id: 'NO_PAPER', label: '缺紙', icon: '🧻', color: 'bg-yellow-100 text-yellow-700 border-yellow-200' },
+        { id: 'DIRTY', label: '髒亂', icon: '🤢', color: 'bg-orange-100 text-orange-700 border-orange-200' },
+        { id: 'MAINTENANCE', label: '維修/故障', icon: '🔧', color: 'bg-red-100 text-red-700 border-red-200' },
+        { id: 'CLOGGED', label: '堵塞', icon: '🚽', color: 'bg-red-100 text-red-700 border-red-200' },
+        { id: 'OTHER', label: '其他', icon: '📝', color: 'bg-gray-100 text-gray-700 border-gray-200' },
+    ]
+
     return (
-        <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/50"
+        <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
             onClick={(e) => e.stopPropagation()}
             onMouseDown={(e) => e.stopPropagation()}
             onMouseUp={(e) => e.stopPropagation()}
             onTouchStart={(e) => e.stopPropagation()}
         >
-            <div className="bg-white p-4 rounded-lg w-80 shadow-xl" onClick={(e) => e.stopPropagation()}>
-                <h3 className="font-bold text-lg mb-2">回報問題</h3>
-                <p className="text-sm text-gray-600 mb-2">地點：{location.name}</p>
-                <textarea
-                    className="w-full border rounded p-2 text-sm mb-4 h-24 text-black"
-                    placeholder="請描述您遇到的問題..."
-                    value={content}
-                    onChange={e => setContent(e.target.value)}
-                    onKeyDown={(e) => e.stopPropagation()}
-                    onKeyUp={(e) => e.stopPropagation()}
-                    onInput={(e) => e.stopPropagation()}
-                    autoFocus
-                />
-                <div className="flex justify-end gap-2">
+            <div className="bg-white p-6 rounded-2xl w-full max-w-sm shadow-2xl animate-scale-in" onClick={(e) => e.stopPropagation()}>
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="font-bold text-xl text-gray-800">回報問題</h3>
+                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+                        <X size={20} />
+                    </button>
+                </div>
+                
+                <p className="text-sm text-gray-500 mb-4">地點：<span className="font-medium text-gray-800">{location.name}</span></p>
+                
+                <div className="grid grid-cols-2 gap-2 mb-4">
+                    {reportTypes.map((item) => (
+                        <button
+                            key={item.id}
+                            onClick={() => setType(item.id as any)}
+                            className={`p-3 rounded-xl border-2 transition-all flex flex-col items-center justify-center gap-1 ${
+                                type === item.id 
+                                    ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200 ring-offset-1' 
+                                    : 'border-transparent bg-gray-50 hover:bg-gray-100 text-gray-600'
+                            }`}
+                        >
+                            <span className="text-2xl">{item.icon}</span>
+                            <span className="text-xs font-bold">{item.label}</span>
+                        </button>
+                    ))}
+                </div>
+
+                <div className="mb-4">
+                    <label className="block text-xs font-bold text-gray-700 mb-1">詳細描述 (選填)</label>
+                    <textarea
+                        className="w-full border border-gray-200 rounded-xl p-3 text-sm h-20 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none bg-gray-50"
+                        placeholder="請描述詳細情況..."
+                        value={content}
+                        onChange={e => setContent(e.target.value)}
+                        onKeyDown={(e) => e.stopPropagation()}
+                        onKeyUp={(e) => e.stopPropagation()}
+                        onInput={(e) => e.stopPropagation()}
+                    />
+                </div>
+
+                <div className="flex justify-end gap-3">
                     <button
                         onClick={onClose}
-                        className="px-3 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded"
+                        className="px-4 py-2 text-sm font-bold text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
                         disabled={isSubmitting}
                     >
                         取消
@@ -662,9 +766,9 @@ function ReportModal({ location, onClose }: { location: Location, onClose: () =>
                     <button
                         onClick={handleSubmit}
                         disabled={isSubmitting}
-                        className="px-3 py-1 text-sm bg-yellow-400 text-white rounded hover:bg-yellow-500 disabled:opacity-50"
+                        className="px-6 py-2 text-sm font-bold bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 shadow-md shadow-blue-200 transition-all active:scale-95"
                     >
-                        {isSubmitting ? '送出中...' : '送出'}
+                        {isSubmitting ? '送出中...' : '送出回報'}
                     </button>
                 </div>
             </div>
@@ -1168,55 +1272,114 @@ function ReviewItem({ review, locationId, onUpdate, onRefresh }: {
     )
 }
 
-const getMarkerContent = (type: LocationType) => {
+const getMarkerContent = (location: Location) => {
+    const { type, currentStatus } = location
+    
+    // Determine color based on status
+    let bgColor = 'bg-blue-600' // Default Clean
+    let triangleColor = 'bg-blue-600'
+    
+    // Status Logic
+    const isSevere = currentStatus === 'MAINTENANCE' || currentStatus === 'CLOGGED'
+    const isWarning = currentStatus === 'NO_PAPER' || currentStatus === 'DIRTY' || currentStatus === 'OTHER'
+    
+    if (isSevere) {
+        bgColor = 'bg-red-600'
+        triangleColor = 'bg-red-600'
+    } else if (isWarning) {
+        bgColor = 'bg-yellow-500'
+        triangleColor = 'bg-yellow-500'
+    } else {
+        // Default colors by type if status is CLEAN
+        if (type === 'TOILET') {
+             bgColor = 'bg-green-600'
+             triangleColor = 'bg-green-600'
+        } else if (type === 'ACCESSIBLE_TOILET') {
+             bgColor = 'bg-blue-600'
+             triangleColor = 'bg-blue-600'
+        } else if (type === 'NURSING_ROOM') {
+             bgColor = 'bg-pink-400'
+             triangleColor = 'bg-pink-400'
+        }
+    }
+
+    // Status Icon Helper
+    const getStatusIcon = (status?: string) => {
+        switch(status) {
+            case 'MAINTENANCE': return '🔧'
+            case 'CLOGGED': return '🚽'
+            case 'NO_PAPER': return '🧻'
+            case 'DIRTY': return '🤢'
+            case 'OTHER': return '📝'
+            default: return null
+        }
+    }
+
+    const statusIcon = getStatusIcon(currentStatus)
+
     if (type === 'TOILET') {
         return (
             <div className="relative w-8 h-8">
-                <div className="absolute inset-0 bg-red-600 rounded-md shadow-md flex items-center justify-center">
+                <div className={`absolute inset-0 ${bgColor} rounded-md shadow-md flex items-center justify-center transition-colors duration-300`}>
                     <img
                         src="https://api.iconify.design/mdi:human-male-female.svg?color=white"
                         alt="Toilet"
                         className="w-6 h-6"
                     />
+                    {statusIcon && (
+                        <div className="absolute -top-1 -right-1 bg-white rounded-full p-0.5 shadow-sm w-4 h-4 flex items-center justify-center border border-gray-100">
+                            <div className="text-[10px] leading-none">{statusIcon}</div>
+                        </div>
+                    )}
                 </div>
                 {/* Triangle arrow at bottom */}
-                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-3 h-3 bg-red-600 rotate-45 shadow-sm -z-10"></div>
+                <div className={`absolute -bottom-1 left-1/2 -translate-x-1/2 w-3 h-3 ${triangleColor} rotate-45 shadow-sm -z-10 transition-colors duration-300`}></div>
             </div>
         )
     } else if (type === 'ACCESSIBLE_TOILET') {
         return (
             <div className="relative w-8 h-8">
-                <div className="absolute inset-0 bg-blue-800 rounded-md shadow-md flex items-center justify-center">
+                <div className={`absolute inset-0 ${bgColor} rounded-md shadow-md flex items-center justify-center transition-colors duration-300`}>
                     <img
                         src="https://api.iconify.design/fa-solid:wheelchair.svg?color=white"
                         alt="Accessible Toilet"
                         className="w-5 h-5"
                     />
+                    {statusIcon && (
+                         <div className="absolute -top-1 -right-1 bg-white rounded-full p-0.5 shadow-sm w-4 h-4 flex items-center justify-center border border-gray-100">
+                            <div className="text-[10px] leading-none">{statusIcon}</div>
+                        </div>
+                    )}
                 </div>
                 {/* Triangle arrow at bottom */}
-                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-3 h-3 bg-blue-800 rotate-45 shadow-sm -z-10"></div>
+                <div className={`absolute -bottom-1 left-1/2 -translate-x-1/2 w-3 h-3 ${triangleColor} rotate-45 shadow-sm -z-10 transition-colors duration-300`}></div>
             </div>
         )
     } else if (type === 'NURSING_ROOM') {
         return (
             <div className="relative w-8 h-8">
-                <div className="absolute inset-0 bg-pink-300 rounded-md shadow-md flex items-center justify-center">
+                <div className={`absolute inset-0 ${bgColor} rounded-md shadow-md flex items-center justify-center transition-colors duration-300`}>
                     <img
                         src="https://api.iconify.design/mdi:baby-bottle.svg?color=white"
                         alt="Nursing Room"
                         className="w-5 h-5"
                     />
+                     {statusIcon && (
+                         <div className="absolute -top-1 -right-1 bg-white rounded-full p-0.5 shadow-sm w-4 h-4 flex items-center justify-center border border-gray-100">
+                            <div className="text-[10px] leading-none">{statusIcon}</div>
+                        </div>
+                    )}
                 </div>
                 {/* Triangle arrow at bottom */}
-                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-3 h-3 bg-pink-300 rotate-45 shadow-sm -z-10"></div>
+                <div className={`absolute -bottom-1 left-1/2 -translate-x-1/2 w-3 h-3 ${triangleColor} rotate-45 shadow-sm -z-10 transition-colors duration-300`}></div>
             </div>
         )
     }
 
-    // Default Pin for others for now, or can be customized similarly
+    // Default Pin for others
     return (
         <Pin
-            background={getPinColor(type)}
+            background={isSevere ? '#EF4444' : isWarning ? '#EAB308' : '#3B82F6'}
             glyphColor={'#FFF'}
             borderColor={'#000'}
         />

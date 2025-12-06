@@ -125,6 +125,7 @@ model Review {
 model Report {
   id          String   @id @default(uuid())
   content     String
+  type        ReportType @default(OTHER) // 新增：回報類型
   status      ReportStatus @default(PENDING)
   adminReply  String?      // 新增：管理員回覆
   
@@ -136,6 +137,15 @@ model Report {
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+enum ReportType {
+  CLEAN         // 正常/已恢復
+  NO_PAPER      // 缺紙
+  DIRTY         // 髒亂
+  MAINTENANCE   // 維修/故障
+  CLOGGED       // 堵塞
+  OTHER         // 其他
 }
 
 model FacilityRequest {
