@@ -7,6 +7,7 @@ import { z } from 'zod'
 const reportSchema = z.object({
   locationId: z.string().uuid(),
   content: z.string().min(1),
+  type: z.enum(['CLEAN', 'NO_PAPER', 'DIRTY', 'MAINTENANCE', 'CLOGGED', 'OTHER']).default('OTHER'),
 })
 
 // Create Report (Member)
@@ -18,13 +19,14 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json()
-    const { locationId, content } = reportSchema.parse(body)
+    const { locationId, content, type } = reportSchema.parse(body)
 
     const report = await prisma.report.create({
       data: {
         content,
         locationId,
         userId: session.user.id,
+        type,
       },
     })
 
