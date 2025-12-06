@@ -1379,7 +1379,7 @@ const getMarkerContent = (location: Location) => {
     // Default Pin for others
     return (
         <Pin
-            background={isSevere ? '#EF4444' : isWarning ? '#EAB308' : '#3B82F6'}
+            background={isSevere ? '#EF4444' : isWarning ? '#EAB308' : getPinColor(type)}
             glyphColor={'#FFF'}
             borderColor={'#000'}
         />

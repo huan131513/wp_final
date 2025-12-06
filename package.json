@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && sed -i \"s/require('.prisma\\/client\\/default')/require('.prisma\\/client\\/index')/g\" node_modules/@prisma/client/default.js && prisma db push --accept-data-loss && next build",
+    "build": "prisma generate && node fix-prisma-import.js && prisma db push --accept-data-loss && next build",
     "start": "next start",
     "lint": "eslint"
   },
