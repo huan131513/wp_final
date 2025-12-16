@@ -39,7 +39,10 @@ export function MapComponent({
 
   useEffect(() => {
         const handleResize = () => {
-            setInfoWindowWidth(Math.min(350, window.innerWidth - 40))
+            // Optimize for mobile (iPhone 12 Pro is 390px)
+            // Use nearly full width on mobile, max 350px on desktop
+            const width = window.innerWidth < 640 ? window.innerWidth - 20 : 350
+            setInfoWindowWidth(width)
           }
         handleResize()
         window.addEventListener('resize', handleResize)
@@ -444,7 +447,7 @@ export function MapComponent({
                             onCloseClick={() => onLocationSelect(null)}
                             maxWidth={infoWindowWidth}
              >
-                            <div className="p-2 min-w-[250px] max-h-[400px] overflow-y-auto pr-4">
+                            <div className="p-2 min-w-[200px] max-h-[400px] overflow-y-auto overflow-x-hidden pr-1">
                                 {selectedLocation.activeIssues && selectedLocation.activeIssues.length > 0 ? (
                                     <div className="space-y-2 mb-3">
                                         {selectedLocation.activeIssues.map(issue => {
@@ -1082,10 +1085,10 @@ function ReviewItem({ review, locationId, onUpdate, onRefresh }: {
                 {review.userId ? (
                     <Link
                         href={`/user/${encodeURIComponent(review.userName)}`}
-                        className="flex items-center gap-2 hover:opacity-80 transition-opacity group"
+                        className="flex items-center gap-2 hover:opacity-80 transition-opacity group min-w-0"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="w-5 h-5 rounded-full bg-gray-300 flex items-center justify-center text-[10px] text-white font-bold overflow-hidden">
+                        <div className="w-5 h-5 rounded-full bg-gray-300 flex items-center justify-center text-[10px] text-white font-bold overflow-hidden flex-shrink-0">
                             {review.user?.avatar && review.user.avatar.startsWith('data:image') ? (
                                 // eslint-disable-next-line @next/next/no-img-element
                                 <img src={review.user.avatar} alt={review.userName} className="w-full h-full object-cover" />
@@ -1093,19 +1096,19 @@ function ReviewItem({ review, locationId, onUpdate, onRefresh }: {
                                 (review.user?.avatar || review.userName.charAt(0).toUpperCase())
                             )}
                         </div>
-                        <span className="font-medium text-sm text-blue-600 group-hover:underline">{review.userName}</span>
+                        <span className="font-medium text-sm text-blue-600 group-hover:underline truncate">{review.userName}</span>
                     </Link>
                 ) : (
-                    <div className="flex items-center gap-2">
-                        <div className="w-5 h-5 rounded-full bg-gray-300 flex items-center justify-center text-[10px] text-white font-bold">
+                    <div className="flex items-center gap-2 min-w-0">
+                        <div className="w-5 h-5 rounded-full bg-gray-300 flex items-center justify-center text-[10px] text-white font-bold flex-shrink-0">
                             {review.userName.charAt(0).toUpperCase()}
                         </div>
-                        <span className="font-medium text-sm text-gray-900">{review.userName}</span>
+                        <span className="font-medium text-sm text-gray-900 truncate">{review.userName}</span>
                     </div>
                 )}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                     {review.rating && (
-                        <span className="text-yellow-400 text-xs">{'★'.repeat(review.rating)}</span>
+                        <span className="text-yellow-400 text-xs whitespace-nowrap">{'★'.repeat(review.rating)}</span>
                     )}
                     {isOwner && (
                         <div className="flex gap-1">
@@ -1175,7 +1178,7 @@ function ReviewItem({ review, locationId, onUpdate, onRefresh }: {
                 </form>
             ) : (
                 <>
-                    <p className="text-sm text-gray-700 mb-1">{review.comment}</p>
+                    <p className="text-sm text-gray-700 mb-1 break-words">{review.comment}</p>
                     <div className="flex items-center justify-between text-[10px] text-gray-400 mb-2">
                         <span>
                             {new Date(review.createdAt).toLocaleDateString()}
@@ -1292,8 +1295,8 @@ const getMarkerContent = (location: Location) => {
     } else {
         // Default colors by type if status is CLEAN
         if (type === 'TOILET') {
-             bgColor = 'bg-green-600'
-             triangleColor = 'bg-green-600'
+             bgColor = 'bg-red-600'
+             triangleColor = 'bg-red-600'
         } else if (type === 'ACCESSIBLE_TOILET') {
              bgColor = 'bg-blue-600'
              triangleColor = 'bg-blue-600'

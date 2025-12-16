@@ -35,7 +35,10 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-xl shadow-md">
-        <div className="text-center">
+        <div className="text-center relative">
+          <Link href="/" className="absolute left-0 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
+            ← 返回
+          </Link>
           <h2 className="text-3xl font-bold text-gray-900">註冊會員</h2>
           <p className="mt-2 text-gray-600">
             已有帳號？ <Link href="/login" className="text-blue-600 hover:text-blue-500">登入</Link>
