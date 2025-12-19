@@ -40,6 +40,7 @@ export async function GET() {
           }
         },
         reviews: {
+          take: 3, // 只獲取最新的 3 則評論以優化效能
           where: {
             parentId: null, // 只獲取頂層評論
             isDeleted: false

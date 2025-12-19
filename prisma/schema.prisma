@@ -60,6 +60,8 @@ model Location {
 
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+
+  @@index([type])
 }
 
 // ... existing models ...
@@ -85,6 +87,9 @@ model Notification {
   isRead    Boolean  @default(false)
   link      String?
   createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([isRead])
 }
 
 enum NotificationType {
@@ -120,6 +125,10 @@ model Review {
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @default(now()) @updatedAt
+
+  @@index([locationId])
+  @@index([userId])
+  @@index([parentId])
 }
 
 model Report {
@@ -137,6 +146,10 @@ model Report {
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([locationId])
+  @@index([userId])
+  @@index([status])
 }
 
 enum ReportType {
@@ -159,6 +172,9 @@ model FacilityRequest {
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
 }
 
 model Achievement {
@@ -224,6 +240,10 @@ model CheckIn {
   locationId String
   location  Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+
+  @@index([locationId])
+  @@index([userId])
+  @@index([createdAt])
 }
 
 // 遊戲相關模型
