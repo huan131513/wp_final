@@ -195,12 +195,12 @@ function HomeContent() {
       {/* Header */}
       <header className="bg-white shadow-sm z-10 border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
             <div className="rounded-lg">
               💩
             </div>
             <h1 className="text-xl font-bold text-gray-900 tracking-tight">NTU poop</h1>
-          </div>
+          </Link>
 
           <nav className="flex gap-4 items-center">
             {session ? (
