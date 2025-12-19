@@ -2,71 +2,184 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { z } from 'zod'
 
-const locationSchema = z.object({
-  name: z.string().min(1),
-  description: z.string().optional(),
-  type: z.enum(['TOILET', 'ACCESSIBLE_TOILET', 'NURSING_ROOM']),
-  lat: z.number(),
-  lng: z.number(),
-  floor: z.string().optional(),
-  hasTissue: z.boolean().optional(),
-  hasDryer: z.boolean().optional(),
-  hasSeat: z.boolean().optional(),
-  hasDiaperTable: z.boolean().optional(),
-  hasWaterDispenser: z.boolean().optional(),
-  hasAutoDoor: z.boolean().optional(),
-  hasHandrail: z.boolean().optional(),
-})
-
-export async function PUT(
+export async function GET(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
-  const session = await getServerSession(authOptions)
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
   try {
-    const { id } = await params
-    const body = await request.json()
-    const validatedData = locationSchema.parse(body)
+    const session = await getServerSession(authOptions)
+    const currentUserId = session?.user?.id
+    // Await params if necessary in newer Next.js versions, but in 13/14 it's usually direct or awaited.
+    // In Next.js 15 params is a promise. Assuming stable 14 or so based on file structure.
+    // To be safe/future-proof if using Next 15, await it. If 14, it's fine.
+    // But "params" is passed as second arg.
+    const { id } = await Promise.resolve(params)
 
-    const location = await prisma.location.update({
+    const location = await prisma.location.findUnique({
       where: { id },
-      data: validatedData,
+      include: {
+        reports: {
+          where: {
+            createdAt: {
+              gte: new Date(Date.now() - 24 * 60 * 60 * 1000)
+            },
+            status: 'PENDING'
+          },
+          select: {
+            type: true,
+            createdAt: true
+          }
+        },
+        reviews: {
+          where: {
+            parentId: null,
+            isDeleted: false
+          },
+          orderBy: { createdAt: 'desc' },
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                avatar: true
+              }
+            },
+            replies: {
+              where: {
+                isDeleted: false
+              },
+              orderBy: { createdAt: 'asc' },
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    name: true,
+                    avatar: true
+                  }
+                },
+                _count: {
+                  select: {
+                    likes: true
+                  }
+                },
+                likes: currentUserId ? {
+                  where: {
+                    userId: currentUserId
+                  },
+                  select: {
+                    id: true
+                  }
+                } : false
+              }
+            },
+            _count: {
+              select: {
+                likes: true,
+                replies: true
+              }
+            },
+            likes: currentUserId ? {
+              where: {
+                userId: currentUserId
+              },
+              select: {
+                id: true
+              }
+            } : false
+          }
+        },
+        checkIns: {
+          take: 5,
+          orderBy: { createdAt: 'desc' },
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                avatar: true
+              }
+            }
+          }
+        }
+      }
     })
 
-    return NextResponse.json(location)
-  } catch (error) {
-    console.error(error)
-    if (error instanceof z.ZodError) {
-        return NextResponse.json({ error: error.issues }, { status: 400 })
+    if (!location) {
+        return NextResponse.json({ error: 'Location not found' }, { status: 404 })
     }
-    return NextResponse.json({ error: 'Failed to update location' }, { status: 500 })
-  }
-}
 
-export async function DELETE(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const session = await getServerSession(authOptions)
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+    // Process location status (same logic as main route)
+    let currentStatus = 'CLEAN'
+    const reports = location.reports
+    const activeIssuesMap = new Map<string, { count: number, lastReportTime: Date }>()
+    
+    if (reports.length > 0) {
+        const priorities: Record<string, number> = {
+            'MAINTENANCE': 5,
+            'CLOGGED': 4,
+            'NO_PAPER': 3,
+            'DIRTY': 2,
+            'OTHER': 1,
+            'CLEAN': 0
+        }
 
-  try {
-    const { id } = await params
-    await prisma.location.delete({
-      where: { id },
-    })
+        let maxPriority = 0
+        
+        for (const report of reports) {
+            if (report.type !== 'CLEAN') {
+                if (!activeIssuesMap.has(report.type)) {
+                    activeIssuesMap.set(report.type, { count: 0, lastReportTime: new Date(0) })
+                }
+                
+                const issue = activeIssuesMap.get(report.type)!
+                issue.count++
+                
+                if (new Date(report.createdAt) > issue.lastReportTime) {
+                    issue.lastReportTime = new Date(report.createdAt)
+                }
+            }
 
-    return NextResponse.json({ success: true })
+            const p = priorities[report.type as string] || 0
+            if (p > maxPriority) {
+                maxPriority = p
+                currentStatus = report.type
+            }
+        }
+    }
+
+    const activeIssues = Array.from(activeIssuesMap.entries()).map(([type, data]) => ({
+        type,
+        count: data.count,
+        lastReportTime: data.lastReportTime
+    }))
+
+    const lastReportTime = reports.length > 0 ? reports.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0].createdAt : null
+
+    const processedLocation = {
+        ...location,
+        currentStatus,
+        activeIssues,
+        activeReportsCount: reports.length,
+        lastReportTime,
+        reviews: location.reviews.map((review: any) => ({
+            ...review,
+            isLiked: review.likes && review.likes.length > 0,
+            likesCount: review._count.likes,
+            repliesCount: review._count.replies,
+            replies: review.replies.map((reply: any) => ({
+            ...reply,
+            isLiked: reply.likes && reply.likes.length > 0,
+            likesCount: reply._count.likes
+            })),
+            likes: undefined,
+            _count: undefined
+        }))
+    }
+
+    return NextResponse.json(processedLocation)
   } catch (error) {
     console.error(error)
-    return NextResponse.json({ error: 'Failed to delete location' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to fetch location details' }, { status: 500 })
   }
 }
