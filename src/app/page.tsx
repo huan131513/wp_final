@@ -120,8 +120,25 @@ function HomeContent() {
   useEffect(() => {
       if (selectedLocation && locations.length > 0) {
           const updatedSelected = locations.find(l => l.id === selectedLocation.id)
-          if (updatedSelected && updatedSelected !== selectedLocation) {
-              setSelectedLocation(updatedSelected)
+          // If we have a selected location with details (e.g. reviews), don't overwrite it with a lite version from the list
+          // unless the list version has something we need (like updated status).
+          // For now, let's merge them carefully or skip if selected has reviews and updated doesn't.
+          if (updatedSelected) {
+              // Check if selectedLocation is "detailed" (has reviews array) and updatedSelected is "lite" (reviews undefined)
+              const isSelectedDetailed = Array.isArray(selectedLocation.reviews)
+              const isUpdatedLite = !updatedSelected.reviews
+
+              if (isSelectedDetailed && isUpdatedLite) {
+                  // Merge: keep details, update status/activeReports from lite list
+                  setSelectedLocation(prev => prev ? ({
+                      ...prev,
+                      ...updatedSelected, // Update basic info and status
+                      reviews: prev.reviews, // Keep details
+                      checkIns: prev.checkIns
+                  }) : null)
+              } else if (updatedSelected !== selectedLocation) {
+                   setSelectedLocation(updatedSelected)
+              }
           }
       }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -150,9 +167,27 @@ function HomeContent() {
     return filtered
   }, [selectedType, locations, userLocation, savedLocationIds])
 
-  const handleLocationSelect = (loc: Location | null) => {
+  const handleLocationSelect = async (loc: Location | null) => {
     setSelectedLocation(loc)
     setIsMobileExpanded(false)
+
+    if (loc) {
+      try {
+        const res = await fetch(`/api/locations/${loc.id}`)
+        if (res.ok) {
+          const detailedLoc = await res.json()
+          setSelectedLocation(prev => {
+            // Only update if the user is still looking at the same location
+            if (prev && prev.id === loc.id) {
+              return detailedLoc
+            }
+            return prev
+          })
+        }
+      } catch (error) {
+        console.error('Failed to fetch location details:', error)
+      }
+    }
   }
 
   return (

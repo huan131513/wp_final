@@ -38,78 +38,6 @@ export async function GET() {
             type: true,
             createdAt: true
           }
-        },
-        reviews: {
-          take: 3, // 只獲取最新的 3 則評論以優化效能
-          where: {
-            parentId: null, // 只獲取頂層評論
-            isDeleted: false
-          },
-          orderBy: { createdAt: 'desc' },
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                avatar: true
-              }
-            },
-            replies: {
-              where: {
-                isDeleted: false
-              },
-              orderBy: { createdAt: 'asc' },
-              include: {
-                user: {
-                  select: {
-                    id: true,
-                    name: true,
-                    avatar: true
-                  }
-                },
-                _count: {
-                  select: {
-                    likes: true
-                  }
-                },
-                likes: currentUserId ? {
-                  where: {
-                    userId: currentUserId
-                  },
-                  select: {
-                    id: true
-                  }
-                } : false
-              }
-            },
-            _count: {
-              select: {
-                likes: true,
-                replies: true
-              }
-            },
-            likes: currentUserId ? {
-              where: {
-                userId: currentUserId
-              },
-              select: {
-                id: true
-              }
-            } : false
-          }
-        },
-        checkIns: {
-          take: 5,
-          orderBy: { createdAt: 'desc' },
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                avatar: true
-              }
-            }
-          }
         }
       }
     })
@@ -172,20 +100,7 @@ export async function GET() {
         currentStatus,
         activeIssues,
         activeReportsCount: reports.length,
-        lastReportTime,
-        reviews: location.reviews.map((review: any) => ({
-          ...review,
-          isLiked: review.likes && review.likes.length > 0,
-          likesCount: review._count.likes,
-          repliesCount: review._count.replies,
-          replies: review.replies.map((reply: any) => ({
-            ...reply,
-            isLiked: reply.likes && reply.likes.length > 0,
-            likesCount: reply._count.likes
-          })),
-          likes: undefined, // 移除原始 likes 陣列
-          _count: undefined // 移除 _count
-        }))
+        lastReportTime
       }
     })
 
