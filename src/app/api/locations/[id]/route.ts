@@ -1,20 +1,18 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 
 export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
     const currentUserId = session?.user?.id
-    // Await params if necessary in newer Next.js versions, but in 13/14 it's usually direct or awaited.
-    // In Next.js 15 params is a promise. Assuming stable 14 or so based on file structure.
-    // To be safe/future-proof if using Next 15, await it. If 14, it's fine.
-    // But "params" is passed as second arg.
-    const { id } = await Promise.resolve(params)
+    
+    // In Next.js 15+ (and compatible with recent 14), params is a promise.
+    const { id } = await params
 
     const location = await prisma.location.findUnique({
       where: { id },
