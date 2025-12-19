@@ -28,7 +28,8 @@ export async function GET() {
           }
         },
         checkIns: {
-            orderBy: { createdAt: 'asc' } // Get all check-ins for streak calculation, sorted asc
+            orderBy: { createdAt: 'asc' }, // Get all check-ins for streak calculation, sorted asc
+            select: { createdAt: true }
         }
       }
     })
