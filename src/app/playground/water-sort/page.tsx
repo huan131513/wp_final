@@ -158,11 +158,13 @@ export default function WaterSortPage() {
       // Check win
       if (checkWin(newTubes)) {
         setGameWon(true)
-        toast.success('🎉 太棒了！關卡完成！')
+        toast.success('關卡完成！')
         
         // Submit score
         if (session) {
           submitScore(moves + 1)
+        } else {
+          toast('訪客模式不會紀錄排行榜，登入後即可參與排名')
         }
       }
     }, 200)
@@ -242,6 +244,14 @@ export default function WaterSortPage() {
         </h1>
         <div className="w-10"></div>
       </header>
+
+      {!session && (
+        <div className="max-w-lg mx-auto w-full mb-3 px-2">
+          <div className="rounded-lg border border-amber-300/40 bg-amber-200/10 px-3 py-2 text-sm text-amber-100">
+            訪客模式：可以玩遊戲，但成績不會上傳至排行榜。登入後才會紀錄排名。
+          </div>
+        </div>
+      )}
       
       {/* Level & Stats */}
       <div className="flex justify-between items-center max-w-lg mx-auto w-full mb-4 px-2">

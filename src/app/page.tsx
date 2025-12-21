@@ -7,7 +7,7 @@ import Link from 'next/link'
 import { useSession, signOut } from 'next-auth/react'
 import RequestFacilityModal from '@/components/RequestFacilityModal'
 import { NotificationBell } from '@/components/NotificationBell'
-import { Heart } from 'lucide-react'
+import { Gamepad2, Heart } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
 
 function HomeContent() {
@@ -190,6 +190,16 @@ function HomeContent() {
     }
   }
 
+  const playgroundNavLink = (
+    <Link
+      href="/playground"
+      className="text-sm font-medium text-purple-600 hover:text-purple-800 flex items-center gap-1 transition-colors"
+    >
+      <Gamepad2 size={16} className="shrink-0" />
+      <span className="hidden md:inline">遊樂場</span>
+    </Link>
+  )
+
   return (
     <div className="flex flex-col h-screen bg-gray-50">
       {/* Header */}
@@ -217,9 +227,7 @@ function HomeContent() {
                     會員中心
                   </Link>
                 )}
-                <Link href="/playground" className="text-sm font-medium text-purple-600 hover:text-purple-800 flex items-center gap-1">
-                  <span>🎮</span> <span className="hidden md:inline">遊樂場</span>
-                </Link>
+                {playgroundNavLink}
                 <button
                   onClick={() => signOut()}
                   className="text-sm font-medium text-gray-600 hover:text-red-600 transition-colors px-3 py-2 rounded-md hover:bg-gray-100"
@@ -229,6 +237,7 @@ function HomeContent() {
               </>
             ) : (
               <>
+                {playgroundNavLink}
                 <Link
                   href="/login"
                   className="text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors px-3 py-2 rounded-md hover:bg-gray-100"

@@ -125,7 +125,7 @@ export default function Game2048Page() {
   }, [getBoardFromTiles])
 
   const handleGameOver = useCallback(async (finalScore: number) => {
-    toast('遊戲結束！', { icon: '🎮' })
+    toast('遊戲結束！')
     if (session) {
       try {
         await fetch('/api/games/score', {
@@ -141,6 +141,8 @@ export default function Game2048Page() {
       } catch (err) {
         console.error(err)
       }
+    } else {
+      toast('訪客模式不會紀錄排行榜，登入後即可參與排名')
     }
   }, [session, fetchLeaderboard])
 
@@ -360,6 +362,11 @@ export default function Game2048Page() {
         </header>
 
         <div className="w-full max-w-[500px]">
+            {!session && (
+                <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                    訪客模式：可以玩遊戲，但成績不會上傳至排行榜。登入後才會紀錄排名。
+                </div>
+            )}
             <div className="flex justify-between items-center mb-6">
                 <div className="bg-[#bbada0] text-white p-3 rounded-lg min-w-[100px] text-center">
                     <div className="text-xs opacity-80 uppercase font-bold">Score</div>
@@ -452,6 +459,11 @@ export default function Game2048Page() {
                 <Trophy className="text-yellow-500" />
                 排行榜
             </h2>
+            {!session && (
+                <div className="mb-3 text-xs text-gray-500">
+                    訪客模式不會上傳分數，但仍可查看排行榜。
+                </div>
+            )}
             <div className="space-y-3">
                 {leaderboard.length === 0 ? (
                     <div className="text-gray-400 text-sm text-center py-4">暫無紀錄，快來挑戰！</div>

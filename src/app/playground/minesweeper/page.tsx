@@ -458,7 +458,7 @@ export default function MinesweeperPage() {
 
     if (revealedCount === rows * cols - mines) {
       setGameState('WON')
-      toast.success('🎉 恭喜通關！')
+      toast.success('恭喜通關！')
       
       // Submit Score
       if (session) {
@@ -497,6 +497,8 @@ export default function MinesweeperPage() {
           console.error('Score submission error:', err)
           toast.error('分數上傳失敗')
         }
+      } else {
+        toast('訪客模式不會紀錄排行榜，登入後即可參與排名')
       }
     }
   }
@@ -536,6 +538,11 @@ export default function MinesweeperPage() {
             </h1>
             <div className="w-[80px]"></div> {/* Spacer */}
         </header>
+        {!session && (
+          <div className="w-full max-w-xl mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            訪客模式：可以玩遊戲，但通關成績不會上傳至排行榜。登入後才會紀錄排名。
+          </div>
+        )}
 
         <div className="flex flex-col items-center">
             {/* Difficulty Selector - Only show EASY on mobile */}
