@@ -623,7 +623,7 @@ export function MapComponent({
                                 <ReviewSection
                                     key={selectedLocation.id}
                                     locationId={selectedLocation.id}
-                                    reviews={selectedLocation.reviews || []}
+                                    reviews={selectedLocation.reviews}
                                     onReviewAdded={onReviewAdded}
                                 />
                </div>
@@ -790,16 +790,16 @@ function FacilityItem({ label, has }: { label: string, has: boolean }) {
     )
 }
 
-function ReviewSection({ locationId, reviews, onReviewAdded }: { locationId: string, reviews: any[], onReviewAdded?: () => void }) {
+function ReviewSection({ locationId, reviews, onReviewAdded }: { locationId: string, reviews?: any[], onReviewAdded?: () => void }) {
     const { data: session } = useSession()
     const [isAdding, setIsAdding] = useState(false)
     const [rating, setRating] = useState(5)
     const [comment, setComment] = useState('')
-    const [localReviews, setLocalReviews] = useState(reviews)
+    const [localReviews, setLocalReviews] = useState<any[]>(reviews ?? [])
     const formRef = useRef<HTMLFormElement>(null)
 
     useEffect(() => {
-        setLocalReviews(reviews)
+        setLocalReviews(reviews ?? [])
     }, [reviews])
 
     const handleStartReview = () => {
@@ -854,17 +854,22 @@ function ReviewSection({ locationId, reviews, onReviewAdded }: { locationId: str
         }))
     }
 
-    const averageRating = localReviews.length > 0 
-        ? Math.round(localReviews.reduce((acc: number, r: any) => acc + (r.rating || 0), 0) / localReviews.filter((r: any) => r.rating).length)
-        : 0
+    const isLoadingReviews = reviews === undefined
+    const ratingReviews = localReviews.filter((r: any) => r?.rating)
+    const averageRating =
+        ratingReviews.length > 0
+            ? Math.round(ratingReviews.reduce((acc: number, r: any) => acc + (r.rating || 0), 0) / ratingReviews.length)
+            : 0
 
     return (
         <div>
             <div className="flex items-center justify-between mb-3">
                 <h4 className="font-bold text-gray-900">評論</h4>
                 <div className="flex text-yellow-400 text-sm">
-                    {averageRating > 0 && '★'.repeat(averageRating)}
-                    <span className="text-gray-400 ml-1">({localReviews.length})</span>
+                    {!isLoadingReviews && averageRating > 0 && '★'.repeat(averageRating)}
+                    <span className="text-gray-400 ml-1">
+                        ({isLoadingReviews ? '...' : localReviews.length})
+                    </span>
                 </div>
             </div>
 
@@ -926,16 +931,24 @@ function ReviewSection({ locationId, reviews, onReviewAdded }: { locationId: str
             )}
 
             <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1 custom-scrollbar">
-                {localReviews.map((review: any) => (
-                    <ReviewItem
-                        key={review.id}
-                        review={review}
-                        locationId={locationId}
-                        onUpdate={updateReviewInList}
-                        onRefresh={onReviewAdded}
-                    />
-                ))}
-                {localReviews.length === 0 && (
+                {isLoadingReviews ? (
+                    <div className="flex items-center justify-center gap-2 text-gray-500 text-sm py-6">
+                        <div className="h-4 w-4 rounded-full border-2 border-gray-300 border-t-gray-600 animate-spin" />
+                        <span>讀取評論中...</span>
+                    </div>
+                ) : (
+                    localReviews.map((review: any) => (
+                        <ReviewItem
+                            key={review.id}
+                            review={review}
+                            locationId={locationId}
+                            onUpdate={updateReviewInList}
+                            onRefresh={onReviewAdded}
+                        />
+                    ))
+                )}
+
+                {!isLoadingReviews && localReviews.length === 0 && (
                     <div className="text-center text-gray-400 text-sm py-4">
                         尚無評論，成為第一個評論者吧！
                     </div>
