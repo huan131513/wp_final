@@ -5,6 +5,10 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && node fix-prisma-import.js && prisma db push --accept-data-loss && next build",
+    "import:711": "node scripts/import-711-locations.js --csv python_script/711_locations.csv",
+    "verify:711": "node scripts/verify-711-import.js --csv python_script/711_locations.csv",
+    "import:tw-public": "node scripts/import-tw-public.js --file python_script/tw_public.txt",
+    "verify:tw-public": "node scripts/verify-tw-public-import.js --file python_script/tw_public.txt",
     "start": "next start",
     "lint": "eslint"
   },
