@@ -30,8 +30,8 @@ This project is a Next.js application for displaying NTU campus facilities (toil
     ```
 
 4.  **Run Development Server:**
-    ```bash
-    npm run dev
+```bash
+npm run dev
     ```
 
 5.  **Admin Access:**

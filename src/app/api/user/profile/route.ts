@@ -28,7 +28,8 @@ export async function GET() {
           }
         },
         checkIns: {
-            orderBy: { createdAt: 'asc' } // Get all check-ins for streak calculation, sorted asc
+            orderBy: { createdAt: 'asc' }, // Get all check-ins for streak calculation, sorted asc
+            select: { createdAt: true }
         }
       }
     })
@@ -98,7 +99,7 @@ export async function GET() {
 
     // 1. Get all defined achievements
     const allAchievements = await prisma.achievement.findMany()
-    
+
     // 2. Check for new unlocks & Calculate progress
     const processedAchievements = []
     
@@ -195,6 +196,6 @@ export async function PATCH(request: Request) {
         return NextResponse.json(updatedUser)
     } catch (error) {
         console.error('Profile update error:', error)
-        return new NextResponse('Internal Server Error', { status: 500 })
-    }
+    return new NextResponse('Internal Server Error', { status: 500 })
+  }
 }

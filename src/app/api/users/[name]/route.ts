@@ -28,16 +28,16 @@ export async function GET(
           }
         },
         achievements: {
-          where: {
-              // Only return unlocked achievements for public view if desired, 
-              // or return all and let frontend filter. 
-              // Let's return all but mark unlocked ones.
-              // Actually, UserAchievement is the join table. 
-              // So we need to fetch UserAchievement specifically.
-          },
-          include: {
-              achievement: true
-          }
+            where: {
+                // Only return unlocked achievements for public view if desired, 
+                // or return all and let frontend filter. 
+                // Let's return all but mark unlocked ones.
+                // Actually, UserAchievement is the join table. 
+                // So we need to fetch UserAchievement specifically.
+            },
+            include: {
+                achievement: true
+            }
         },
         checkIns: {
             orderBy: { createdAt: 'desc' },
