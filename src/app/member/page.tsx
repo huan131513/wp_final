@@ -1,11 +1,64 @@
 'use client'
 
 import { useSession } from 'next-auth/react'
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import Link from 'next/link'
 import { Edit, Key, Heart, Trash2, Crown, Upload, Camera, ChevronLeft, ChevronRight } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { NotificationBell } from '@/components/NotificationBell'
+
+const PASSWORD_MIN = 8
+const PASSWORD_MAX = 64
+
+function getPasswordSignals(password: string) {
+  const length = password.length
+  const hasLetter = /[A-Za-z]/.test(password)
+  const hasNumber = /\d/.test(password)
+  const hasSymbol = /[^A-Za-z0-9]/.test(password)
+  const isTooLong = length > PASSWORD_MAX
+
+  // 強度只是引導用：不強制符號/大寫，但有會加分
+  let score = 0
+  if (length >= PASSWORD_MIN) score += 1
+  if (hasLetter) score += 1
+  if (hasNumber) score += 1
+  if (length >= 12) score += 1
+  if (hasSymbol) score += 1
+  if (isTooLong) score = 0
+
+  const normalized = Math.min(Math.max(score, 0), 5)
+  const percent = (normalized / 5) * 100
+
+  let label = '尚未輸入'
+  let barClass = 'bg-gray-200'
+  if (length > 0) {
+    if (normalized <= 2) {
+      label = '弱'
+      barClass = 'bg-red-500'
+    } else if (normalized === 3) {
+      label = '普通'
+      barClass = 'bg-yellow-500'
+    } else if (normalized === 4) {
+      label = '強'
+      barClass = 'bg-green-500'
+    } else {
+      label = '很強'
+      barClass = 'bg-emerald-600'
+    }
+  }
+
+  const ruleLengthOk = length >= PASSWORD_MIN && length <= PASSWORD_MAX
+  const ruleAlphaNumOk = hasLetter && hasNumber
+
+  return {
+    length,
+    percent,
+    label,
+    barClass,
+    ruleLengthOk,
+    ruleAlphaNumOk,
+  }
+}
 
 interface AchievementDisplay {
     id: string
@@ -607,23 +660,37 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
     const [confirm, setConfirm] = useState('')
     const [loading, setLoading] = useState(false)
 
+    const signals = useMemo(() => getPasswordSignals(password), [password])
+    const isConfirmTouched = confirm.length > 0
+    const isConfirmMatch = confirm === password
+
+    const canSubmit =
+        signals.ruleLengthOk &&
+        signals.ruleAlphaNumOk &&
+        confirm.length > 0 &&
+        isConfirmMatch &&
+        !loading
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (password !== confirm) return toast.error('兩次密碼輸入不一致')
-        if (password.length < 6) return toast.error('密碼長度至少需 6 碼')
+        if (!signals.ruleLengthOk) return toast.error(`密碼需為 ${PASSWORD_MIN}–${PASSWORD_MAX} 字元`)
+        if (!signals.ruleAlphaNumOk) return toast.error('密碼需包含英文與數字（英數混用）')
+        if (!confirm) return toast.error('請再次輸入密碼以確認')
+        if (!isConfirmMatch) return toast.error('兩次密碼輸入不一致')
 
         setLoading(true)
         try {
             const res = await fetch('/api/user/security', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ newPassword: password })
+                body: JSON.stringify({ newPassword: password, confirmPassword: confirm })
             })
             if (res.ok) {
                 toast.success('密碼已修改')
                 onClose()
             } else {
-                toast.error('修改失敗')
+                const data = await res.json().catch(() => null)
+                toast.error(data?.error || '修改失敗')
             }
         } catch (error) {
             console.error(error)
@@ -645,8 +712,32 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
                             value={password}
                             onChange={e => setPassword(e.target.value)}
                             className="w-full p-3 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                            placeholder="至少 6 碼"
+                            placeholder={`密碼（${PASSWORD_MIN}–${PASSWORD_MAX} 字元，英數混用）`}
                         />
+                    </div>
+
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                            <div className="text-sm text-gray-700">密碼強度</div>
+                            <div className="text-sm font-medium text-gray-700">{signals.label}</div>
+                        </div>
+                        <div className="h-2 w-full rounded-full bg-gray-200 overflow-hidden">
+                            <div
+                                className={`h-full ${signals.barClass} transition-all duration-300`}
+                                style={{ width: `${signals.percent}%` }}
+                            />
+                        </div>
+                        <div className="text-sm space-y-1">
+                            <div className={signals.ruleLengthOk ? 'text-green-600' : 'text-gray-600'}>
+                                長度：{PASSWORD_MIN}–{PASSWORD_MAX} 字元（目前 {signals.length}）
+                            </div>
+                            <div className={signals.ruleAlphaNumOk ? 'text-green-600' : 'text-gray-600'}>
+                                英數混用：需同時包含英文與數字
+                            </div>
+                            <div className={!isConfirmTouched ? 'text-gray-600' : isConfirmMatch ? 'text-green-600' : 'text-red-600'}>
+                                確認密碼：{!isConfirmTouched ? '尚未輸入' : isConfirmMatch ? '一致' : '不一致'}
+                            </div>
+                        </div>
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">確認新密碼</label>
@@ -659,7 +750,7 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
                     </div>
                     <div className="flex gap-2 justify-end pt-2">
                         <button type="button" onClick={onClose} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm font-medium">取消</button>
-                        <button type="submit" disabled={loading} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
+                        <button type="submit" disabled={!canSubmit} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
                             {loading ? '處理中...' : '確認修改'}
                         </button>
                     </div>
