@@ -42,6 +42,6 @@ next-env.d.ts
 
 /src/generated/prisma
 
-# local scripts
-/python_script/
-/python_scrip/
+
+# some text files
+/facebook_post.txt
