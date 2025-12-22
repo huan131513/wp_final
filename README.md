@@ -47,7 +47,6 @@ Group 30 - 「NTUPOOP」
 
 ## 如何在 localhost 安裝與測試之詳細步驟
 
-> 助教/老師會完全按照此步驟執行安裝。請務必依序操作。
 
 ### 0) 需要的環境
 - Node.js：建議使用 **Node.js 20 LTS**（或至少 18+）
@@ -57,7 +56,6 @@ Group 30 - 「NTUPOOP」
   - `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`
   - `NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID`（Advanced Markers 需要）
 
-> 備註：專案內有 `python_script/`，但**匯入資料用的是 Node.js 腳本**（`scripts/*.js`），一般測試不需要安裝 Python。若要自行重跑爬蟲才需要 Python。
 
 ### 1) 下載專案與安裝依賴
 在專案根目錄執行：
@@ -81,8 +79,8 @@ createdb ntupoop
 CREATE DATABASE ntupoop;
 ```
 
-### 3) 設定環境變數（.env.local）
-在專案根目錄建立檔案 `.env.local`（若已存在則直接修改），內容範例如下（請把尖括號內容換成你的值）：
+### 3) 設定環境變數（.env）
+在專案根目錄建立檔案 `.env`，內容範例如下（請把尖括號內容換成你的值）：
 
 ```bash
 DATABASE_URL="postgresql://<USER>:<PASSWORD>@localhost:5432/ntupoop?schema=public"
@@ -115,9 +113,10 @@ npx prisma db push
 ```
 
 ### 5) 匯入測試資料（地點資料）
-本專案提供兩份資料匯入腳本（資料檔案已在 repo 的 `python_script/` 內）：
+本專案提供兩份資料匯入腳本（資料檔案已在 repo 的 `data/` 內）：
 
 #### 5-1 匯入「台灣公廁資料」（tw_public）
+本資料取得於【環境衛生管理資訊系統】https://esms.moenv.gov.tw/eco/toilet/FindToilet.aspx?openExternalBrowser=1
 
 ```bash
 npm run import:tw-public
@@ -130,6 +129,7 @@ npm run verify:tw-public
 ```
 
 #### 5-2 匯入「7-ELEVEN 地點」（711）
+本資料取得於【711電子地圖系統】https://emap.pcsc.com.tw/
 
 ```bash
 npm run import:711
@@ -157,9 +157,9 @@ npm run dev
 - 管理員（Admin）：
   - 到 `/admin` 登入
   - 帳號固定為：`admin`
-  - 密碼為你在 `.env.local` 設定的：`ADMIN_PASSWORD`
+  - 密碼為你在 `.env` 設定的：`ADMIN_PASSWORD`
 
-### 8) 測試方式（助教可照此檢查功能）
+### 8) 測試方式
 #### 8-1 訪客模式
 - 首頁地圖可瀏覽地點、點地標可看資訊
 - 可點「導航」進行路線規劃（步行）
@@ -167,12 +167,9 @@ npm run dev
 #### 8-2 會員功能（登入後）
 - 地點：收藏 / 評論 / 回報 / 申請新增
 - 會員中心：個人資料 / 通知 / 歷史紀錄 / 成就 / 排行榜
-- 會員中心可修改密碼（同註冊規則）
+- 會員中心可修改密碼（同註冊規則）或個人簡介
 
 #### 8-3 其他頁面
 - 遊樂場：可進入小遊戲頁面
 
----
 
-## Deployment（可選）
-建議使用 Vercel 依照 Next.js 的標準流程部署，並在 Vercel 專案設定中填入 `.env.local` 對應的環境變數。
