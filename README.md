@@ -1,7 +1,7 @@
-# [114-1] Web Programming Final
+# NTU poop map
 
-Group 30 - 「NTUPOOP」  
-組員：許元瑞、彭子桓
+## Deployed 連結
+- `https://ntupoop.vercel.app/`
 
 ## Demo 影片連結
 - `https://youtu.be/He-jr2eHJVw`
@@ -23,8 +23,7 @@ Group 30 - 「NTUPOOP」
 - 成就系統 & 排行榜：你可以成為「屎帝」或「專業廁所評論家」！
 - 遊樂場小遊戲：給你一個「上廁所也不無聊」的選擇
 
-## Deployed 連結
-- `https://ntupoop.vercel.app/`
+
 
 ## 使用/操作方式
 - 使用者端：
