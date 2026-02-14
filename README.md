@@ -1,7 +1,7 @@
 # NTU poop map
 
-## Deployed 連結
-- `https://ntupoop.vercel.app/`
+## 網站連結
+- [https://ntupoop.vercel.app/](https://ntupoop.vercel.app/)
 
 主頁             |  個人中心
 :-------------------------:|:-------------------------:
