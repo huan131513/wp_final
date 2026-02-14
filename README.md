@@ -3,6 +3,11 @@
 ## Deployed 連結
 - `https://ntupoop.vercel.app/`
 
+主頁             |  個人中心
+:-------------------------:|:-------------------------:
+  <img width="1242" height="799" alt="截圖 2026-02-14 下午3 06 17" src="https://github.com/user-attachments/assets/462e11fa-c9e2-464b-97e4-b9fd9f10b0e9" />| <img width="1154" height="797" alt="截圖 2026-02-14 下午3 07 51" src="https://github.com/user-attachments/assets/bc78265b-1452-416a-b0df-3e7dac42df7d" />
+
+
 ## Demo 影片連結
 - `https://youtu.be/He-jr2eHJVw`
 
